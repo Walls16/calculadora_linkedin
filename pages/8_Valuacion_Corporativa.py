@@ -45,7 +45,7 @@ engine = get_engine()
 
 page_header(
     titulo="15. Valuación Corporativa",
-    subtitulo="DCF · WACC · CAPM · Fama-French · Múltiplos Comparables"
+    subtitulo="DCF · WACC · CAPM"
 )
 
 # =============================================================================
@@ -67,11 +67,9 @@ def _guardar_en_historial(tipo: str, resumen: dict):
 # =============================================================================
 # TABS
 # =============================================================================
-tab_dcf, tab_capm, tab_mult, tab_hist = st.tabs([
+tab_dcf, tab_capm = st.tabs([
     "DCF + WACC",
-    "CAPM y Fama-French",
-    "Múltiplos Comparables",
-    "Historial de Cálculos",
+    "Beta y Alpha"
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -445,192 +443,3 @@ with tab_capm:
                 "Ke (CAPM)": f"{res['ke']*100:.2f}%",
                 "alpha anual": f"{(res['ret_a']-res['ke'])*100:.2f}%",
             })
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — MÚLTIPLOS COMPARABLES
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_mult:
-    st.markdown("### Valuación por Múltiplos Comparables")
-    themed_info(
-        "Descarga automáticamente los múltiplos de mercado de un panel de empresas comparables "
-        "usando **yfinance**. Calcula el rango de valor implícito para tu empresa objetivo "
-        "aplicando los múltiplos medianos del panel."
-    )
-    separador()
-
-    if not YFINANCE_OK:
-        themed_error("yfinance no está instalado.")
-    else:
-        col_m1, col_m2 = st.columns([2, 1])
-        with col_m1:
-            tickers_comp = st.text_input(
-                "Empresas comparables (tickers separados por coma):",
-                value="AAPL, MSFT, GOOGL, META, AMZN",
-                key="mult_tickers",
-            )
-            ticker_obj = st.text_input(
-                "Empresa objetivo (opcional — para calcular valor implícito):",
-                value="", key="mult_obj", placeholder="Ej. NVDA",
-            )
-        with col_m2:
-            st.write("")
-            btn_mult = st.button("Descargar múltiplos", use_container_width=True,
-                                  key="btn_mult")
-
-        if btn_mult:
-            ticks = [t.strip().upper() for t in tickers_comp.split(",") if t.strip()]
-            with st.spinner(f"Descargando datos de {len(ticks)} empresas..."):
-                rows = []
-                for t in ticks:
-                    try:
-                        info = yf.Ticker(t).info
-                        rows.append({
-                            "Ticker":         t,
-                            "Nombre":         info.get("shortName", t)[:30],
-                            "P/E (trailing)": info.get("trailingPE"),
-                            "P/E (forward)":  info.get("forwardPE"),
-                            "EV/EBITDA":      info.get("enterpriseToEbitda"),
-                            "P/S":            info.get("priceToSalesTrailing12Months"),
-                            "P/B":            info.get("priceToBook"),
-                            "Precio ($)":     info.get("currentPrice") or info.get("regularMarketPrice"),
-                            "Cap. Mercado ($B)": (info.get("marketCap") or 0) / 1e9,
-                            "EV ($B)":           (info.get("enterpriseValue") or 0) / 1e9,
-                        })
-                    except Exception:
-                        rows.append({"Ticker": t, "Nombre": "Error al descargar"})
-
-                df_mult = pd.DataFrame(rows)
-                st.session_state["df_mult"] = df_mult
-
-            # Descargar datos de la empresa objetivo si se ingresó
-            if ticker_obj.strip():
-                try:
-                    info_obj = yf.Ticker(ticker_obj.strip().upper()).info
-                    st.session_state["mult_obj_info"] = info_obj
-                    st.session_state["mult_obj_tick"] = ticker_obj.strip().upper()
-                except Exception as e:
-                    themed_warning(f"No se pudo obtener datos de {ticker_obj}: {e}")
-
-        if "df_mult" in st.session_state:
-            df_m = st.session_state["df_mult"]
-            c_th = get_current_theme()
-
-            # Panel de comparables
-            st.markdown("##### Panel de múltiplos de las empresas comparables")
-            numeric_cols = ["P/E (trailing)","P/E (forward)","EV/EBITDA","P/S","P/B"]
-            df_display = df_m.copy()
-            for col in numeric_cols:
-                if col in df_display.columns:
-                    df_display[col] = df_display[col].apply(
-                        lambda x: f"{x:.2f}x" if pd.notna(x) and x is not None else "—"
-                    )
-            df_display["Cap. Mercado ($B)"] = df_display["Cap. Mercado ($B)"].apply(
-                lambda x: f"${x:.1f}B" if pd.notna(x) else "—")
-            df_display["Precio ($)"] = df_display["Precio ($)"].apply(
-                lambda x: f"${x:.2f}" if pd.notna(x) else "—")
-            st.dataframe(df_display, hide_index=True, use_container_width=True)
-
-            separador()
-
-            # Estadísticas del panel
-            st.markdown("##### Estadísticas del panel")
-            stats_rows = []
-            for col in numeric_cols:
-                if col not in df_m.columns:
-                    continue
-                vals_c = pd.to_numeric(df_m[col], errors="coerce").dropna()
-                vals_c = vals_c[(vals_c > 0) & (vals_c < 500)]  # filtrar outliers extremos
-                if len(vals_c) > 0:
-                    stats_rows.append({
-                        "Múltiplo": col,
-                        "Mínimo":  f"{vals_c.min():.2f}x",
-                        "Mediana": f"{vals_c.median():.2f}x",
-                        "Media":   f"{vals_c.mean():.2f}x",
-                        "Máximo":  f"{vals_c.max():.2f}x",
-                        "n":       int(len(vals_c)),
-                    })
-            df_stats = pd.DataFrame(stats_rows)
-            st.dataframe(df_stats, hide_index=True, use_container_width=True)
-
-            # Valuación implícita de la empresa objetivo
-            if "mult_obj_info" in st.session_state:
-                separador()
-                st.markdown(f"##### Valuación implícita de **{st.session_state['mult_obj_tick']}**")
-                info_o = st.session_state["mult_obj_info"]
-
-                metricas_obj = {
-                    "P/E (trailing)": info_o.get("trailingEps"),
-                    "P/E (forward)":  info_o.get("forwardEps"),
-                    "EV/EBITDA":      (info_o.get("ebitda") or 0) / 1e9,
-                    "P/S":            (info_o.get("totalRevenue") or 0) / (info_o.get("sharesOutstanding") or 1),
-                    "P/B":            info_o.get("bookValue"),
-                }
-                precio_actual = info_o.get("currentPrice") or info_o.get("regularMarketPrice")
-
-                impl_rows = []
-                for col, met_val in metricas_obj.items():
-                    if col not in df_stats["Múltiplo"].values or met_val is None:
-                        continue
-                    med_mult = float(df_stats[df_stats["Múltiplo"]==col]["Mediana"].iloc[0].replace("x",""))
-                    precio_imp = met_val * med_mult
-                    if precio_imp > 0:
-                        updown = (precio_imp / precio_actual - 1) * 100 if precio_actual else 0
-                        impl_rows.append({
-                            "Múltiplo usado": col,
-                            "Métrica base": f"{met_val:.2f}",
-                            "Múltiplo mediana panel": f"{med_mult:.2f}x",
-                            "Precio implícito ($)": f"${precio_imp:.2f}",
-                            "vs Precio actual": f"{updown:+.1f}%",
-                        })
-
-                if impl_rows:
-                    themed_success(f"<h3 style='margin:0; color:inherit;'>Precio Real de Mercado: ${precio_actual:.2f}</h3>")
-                    
-                    with paso_a_paso():
-                        st.latex(r"P_{implícito} = \text{Métrica}_{\text{Empresa}} \times \text{Múltiplo}_{\text{Mediana del Panel}}")
-                        st.latex(rf"P_{{P/E}} = {metricas_obj.get('P/E (trailing)', 0):.2f} \times {float(df_stats[df_stats['Múltiplo']=='P/E (trailing)']['Mediana'].iloc[0].replace('x','')):.2f} = {metricas_obj.get('P/E (trailing)', 0)*float(df_stats[df_stats['Múltiplo']=='P/E (trailing)']['Mediana'].iloc[0].replace('x','')):.2f}")
-
-                    st.dataframe(pd.DataFrame(impl_rows), hide_index=True, use_container_width=True)
-
-            _guardar_en_historial("Múltiplos", {
-                "panel": tickers_comp[:40],
-                "empresas": str(len(df_m)),
-            })
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — HISTORIAL DE CÁLCULOS
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_hist:
-    st.markdown("### Historial de Cálculos")
-    themed_info(
-        "Se guardan automáticamente los últimos **10 cálculos** realizados en esta sesión. "
-        "Útil para comparar resultados con distintos supuestos sin necesidad de reescribir parámetros."
-    )
-    separador()
-
-    hist = st.session_state.get("hist_valuaciones", [])
-    if not hist:
-        themed_warning("Aún no hay cálculos en el historial. Realiza una valuación para verla aquí.")
-    else:
-        col_h1, col_h2 = st.columns([4, 1])
-        with col_h2:
-            if st.button("Limpiar historial", key="limpiar_hist"):
-                st.session_state["hist_valuaciones"] = []
-                st.rerun()
-        with col_h1:
-            for i, entrada in enumerate(hist):
-                badge = {
-                    "DCF": "🏢",
-                    "CAPM": "📐",
-                    "Múltiplos": "📊",
-                }.get(entrada.get("tipo",""), "📌")
-                with st.expander(
-                    f"{badge} [{entrada['fecha']}] {entrada['tipo']} — "
-                    + " · ".join(f"{k}={v}" for k, v in entrada.items()
-                                  if k not in ("fecha","tipo"))
-                ):
-                    df_e = pd.DataFrame([{k: v for k, v in entrada.items()
-                                          if k not in ("fecha","tipo","df_r")}])
-                    st.dataframe(df_e, hide_index=True, use_container_width=True)

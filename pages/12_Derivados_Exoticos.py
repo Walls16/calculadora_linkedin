@@ -94,7 +94,7 @@ with tab_gap:
     themed_info(
         "Una opción Gap tiene **dos strikes**: el strike de activación <span style='font-family: serif; font-style: italic;'>K<sub>1</sub></span> "
         "que determina si se ejerce, y el strike de pago <span style='font-family: serif; font-style: italic;'>K<sub>2</sub></span> "
-        "que determina el monto. <br><br><b>💡 Payoff (Call):</b> Se recibe <span style='font-family: serif; font-style: italic;'>S<sub>T</sub> − K<sub>2</sub></span> "
+        "que determina el monto. <br><br><b> Payoff (Call):</b> Se recibe <span style='font-family: serif; font-style: italic;'>S<sub>T</sub> − K<sub>2</sub></span> "
         "únicamente si <span style='font-family: serif; font-style: italic;'>S<sub>T</sub> > K<sub>1</sub></span>. "
         "Si <span style='font-family: serif; font-style: italic;'>K<sub>1</sub> ≠ K<sub>2</sub></span>, existe un salto brusco (gap) en la ganancia."
     )
@@ -886,22 +886,105 @@ with tab_real:
 
     # ── INTERCAMBIO REAL ─────────────────────────────────────────────────
     elif tipo_exotico.startswith("Intercambio"):
+        
+        col_qty1, col_qty2 = st.columns(2)
+        with col_qty1:
+            n1_ex = st.number_input("Unidades a ENTREGAR de S1 (n1):", min_value=0.001, value=1.0, step=0.5, key="ex_n1")
+        with col_qty2:
+            n2_ex = st.number_input("Unidades a RECIBIR de S2 (n2):", min_value=0.001, value=1.0, step=0.5, key="ex_n2")
+
+        separador()
         col_m1, col_m2 = st.columns(2)
         with col_m1:
-            S2_ex   = st.number_input("Spot S2", min_value=0.001, value=S_ex*1.1, step=1.0, key="ex_S2_inp")
-            sig2_ex = st.number_input("Volatilidad sigma2 %", min_value=0.01, value=sig_ex*100, step=0.5, key="ex_sig2_inp") / 100
+            st.markdown(f"**S1 — Activo que se entrega ({ticker_lbl})**")
+            q1_ex = st.number_input("Dividendo q1 %", value=q_ex*100, step=0.1, key="ex_q1") / 100
+
+            st.markdown("**S2 — Activo que se recibe**")
+            ticker_ex2 = st.text_input("Ticker Activo 2:", value="MSFT", key="ex_ticker2").strip().upper()
+            btn_ex2 = st.button("Cargar S2 y calcular correlacion real", key="btn_ex2", use_container_width=True)
+
+            if btn_ex2:
+                with st.spinner(f"Descargando historial de {ticker_lbl} y {ticker_ex2}..."):
+                    try:
+                        import yfinance as _yf
+                        import datetime as _dtt
+                        _hoy = _dtt.date.today()
+                        _ini = _hoy - _dtt.timedelta(days=365)
+                        _h1 = _yf.download(ticker_lbl, start=_ini, end=_hoy, progress=False, auto_adjust=True)["Close"].squeeze().dropna()
+                        _h2 = _yf.download(ticker_ex2, start=_ini, end=_hoy, progress=False, auto_adjust=True)["Close"].squeeze().dropna()
+                        _s2v, _v2v = engine.obtener_datos_subyacente(ticker_ex2)
+
+                        if _s2v is None or len(_h1) < 20 or len(_h2) < 20:
+                            themed_error(f"No se encontró {ticker_ex2} o datos insuficientes.")
+                        else:
+                            import pandas as _pd
+                            _df = _pd.concat([_h1.rename("S1"), _h2.rename("S2")], axis=1, join="inner").dropna()
+                            _b1 = _df["S1"] / _df["S1"].iloc[0] * 100
+                            _b2 = _df["S2"] / _df["S2"].iloc[0] * 100
+                            _r1 = np.log(_b1 / _b1.shift(1)).dropna()
+                            _r2 = np.log(_b2 / _b2.shift(1)).dropna()
+                            _rho_calc = float(_r1.corr(_r2))
+                            st.session_state["ex_S2"] = float(_s2v)
+                            st.session_state["ex_sig2"] = float(_v2v * 100)
+                            st.session_state["ex_ticker2_ok"] = ticker_ex2
+                            st.session_state["ex_rho_real"] = _rho_calc
+                            st.session_state["ex_b100_1"] = _b1
+                            st.session_state["ex_b100_2"] = _b2
+                            themed_success(f"**{ticker_ex2}** S2=${_s2v:,.4f} | sigma2={_v2v*100:.2f}% | **rho = {_rho_calc:.4f}**")
+                            st.rerun()
+                    except Exception as _e:
+                        themed_error(f"Error: {_e}")
+
+            if "ex_S2" not in st.session_state: st.session_state["ex_S2"] = S_ex * 1.1
+            if "ex_sig2" not in st.session_state: st.session_state["ex_sig2"] = sig_ex * 100
+            if "ex_ticker2_ok" not in st.session_state: st.session_state["ex_ticker2_ok"] = "ACTIVO2"
+            if "ex_rho_real" not in st.session_state: st.session_state["ex_rho_real"] = 0.5
+
+            S2_ex   = st.number_input("Spot S2", min_value=0.001, value=float(st.session_state["ex_S2"]), step=1.0, key="ex_S2_inp")
+            sig2_ex = st.number_input("Volatilidad sigma2 %", min_value=0.01, value=float(st.session_state["ex_sig2"]), step=0.5, key="ex_sig2_inp") / 100
             q2_ex   = st.number_input("Dividendo q2 %", value=0.0, step=0.1, key="ex_q2") / 100
-            rho_ex  = st.slider("Correlacion rho:", min_value=-1.0, max_value=1.0, value=0.5, step=0.01, key="ex_rho_slider")
+            rho_mode = st.radio("Correlacion rho:", ["Automatica (real)", "Manual"], horizontal=True, key="ex_rho_mode")
+            if rho_mode.startswith("Auto"):
+                rho_ex = st.session_state["ex_rho_real"]
+                st.metric("rho calculado", f"{rho_ex:.4f}")
+            else:
+                rho_ex = st.slider("rho manual:", min_value=-1.0, max_value=1.0, value=float(st.session_state["ex_rho_real"]), step=0.01, key="ex_rho_slider")
+
+        ticker2_lbl = st.session_state.get("ex_ticker2_ok", "ACTIVO2")
+
         with col_m2:
-            prima_int_ex = engine.opciones_intercambio_uxv(S_ex, S2_ex, q_ex, q2_ex, sig_ex, sig2_ex, rho_ex, T_ex)
+            U_eff = n1_ex * S_ex
+            V_eff = n2_ex * S2_ex
+            sig_comb = np.sqrt(sig_ex**2 + sig2_ex**2 - 2*rho_ex*sig_ex*sig2_ex)
+
+            if V_eff > 0 and U_eff > 0 and sig_comb > 0 and T_ex > 0:
+                d1_int = (np.log(V_eff / U_eff) + (q1_ex - q2_ex + sig_comb**2 / 2) * T_ex) / (sig_comb * np.sqrt(T_ex))
+                d2_int = d1_int - sig_comb * np.sqrt(T_ex)
+                prima_int_ex = max(V_eff * np.exp(-q2_ex * T_ex) * _norm.cdf(d1_int) - U_eff * np.exp(-q1_ex * T_ex) * _norm.cdf(d2_int), 0.0)
+            else:
+                prima_int_ex = 0.0
+
             themed_success(f"<h3 style='margin:0; color:inherit;'>Intercambio: ${prima_int_ex:,.4f}</h3>")
+            c1r, c2r, c3r = st.columns(3)
+            c1r.metric("U = n1 * S1", f"${U_eff:,.4f}")
+            c2r.metric("V = n2 * S2", f"${V_eff:,.4f}")
+            c3r.metric("sigma*", f"{sig_comb*100:.4f}%")
+            
+            if "ex_b100_1" in st.session_state and "ex_b100_2" in st.session_state:
+                import plotly.graph_objects as _go_i
+                _b1 = st.session_state["ex_b100_1"]
+                _b2 = st.session_state["ex_b100_2"]
+                _fig_b = _go_i.Figure()
+                _fig_b.add_trace(_go_i.Scatter(x=_b1.index.astype(str), y=_b1.values, name=ticker_lbl, mode="lines", line=dict(color=c_th["primary"], width=1.5)))
+                _fig_b.add_trace(_go_i.Scatter(x=_b2.index.astype(str), y=_b2.values, name=ticker2_lbl, mode="lines", line=dict(color=c_th["accent"], width=1.5)))
+                _fig_b.update_layout(title=f"Precios normalizados base 100 | rho={rho_ex:.4f}", xaxis_title="Fecha", yaxis_title="Indice (base 100)", height=300, **plotly_theme())
+                st.plotly_chart(_fig_b, use_container_width=True)
+
         with paso_a_paso():
-            sig_int = np.sqrt(sig_ex**2 + sig2_ex**2 - 2*rho_ex*sig_ex*sig2_ex)
-            st.latex(rf"\sigma^* = \sqrt{{{sig_ex:.4f}^2 + {sig2_ex:.4f}^2 - 2({rho_ex:.2f})({sig_ex:.4f})({sig2_ex:.4f})}} = {sig_int:.6f}")
-            d1_int = (np.log(S2_ex/S_ex) + (q_ex - q2_ex + sig_int**2/2)*T_ex) / (sig_int*np.sqrt(T_ex))
-            d2_int = d1_int - sig_int*np.sqrt(T_ex)
+            st.latex(rf"\sigma^* = \sqrt{{{sig_ex:.4f}^2 + {sig2_ex:.4f}^2 - 2({rho_ex:.2f})({sig_ex:.4f})({sig2_ex:.4f})}} = {sig_comb:.6f}")
+            st.latex(rf"d_1 = \frac{{\ln({V_eff:.2f}/{U_eff:.2f}) + ({q1_ex:.4f} - {q2_ex:.4f} + \frac{{{sig_comb:.6f}^2}}{{2}}){T_ex:.4f}}}{{{sig_comb:.6f}\sqrt{{{T_ex:.4f}}}}}")
             st.latex(rf"d_1 = {d1_int:.6f}, \quad d_2 = {d2_int:.6f}")
-            st.latex(rf"c = {S2_ex:.2f} e^{{-{q2_ex:.4f}({T_ex:.4f})}} N({d1_int:.4f}) - {S_ex:.2f} e^{{-{q_ex:.4f}({T_ex:.4f})}} N({d2_int:.4f}) = {prima_int_ex:.4f}")
+            st.latex(rf"c = {V_eff:.2f} e^{{-{q2_ex:.4f}({T_ex:.4f})}} N({d1_int:.4f}) - {U_eff:.2f} e^{{-{q1_ex:.4f}({T_ex:.4f})}} N({d2_int:.4f}) = {prima_int_ex:.4f}")
 
     # ── GRÁFICA COMPARATIVA DE TODOS LOS EXÓTICOS ─────────────────────────────
     separador()

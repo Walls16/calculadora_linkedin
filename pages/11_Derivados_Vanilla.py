@@ -1283,10 +1283,10 @@ with tab_vol:
 
     st.markdown("### Volatilidad Implícita y Sonrisa de Volatilidad")
     themed_info(
-        "La **volatilidad implícita** (<span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span>) es la <span style='font-family: serif; font-style: italic;'>&sigma;</span> que hace que el precio BSM iguale "
-        "el precio de mercado de la opción. Inversión numérica de BSM via bisección (Brentq). "
+        "La **volatilidad implícita** (<span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span>) es la volatilidad que hace que el precio de Black-Scholes iguale "
+        "el precio de mercado actual de la opción. Inversión numérica vía bisección. "
         "La **sonrisa de volatilidad** grafica <span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span> vs. moneyness (<span style='font-family: serif; font-style: italic;'>K/S</span>) para múltiples strikes, "
-        "revelando las primas de riesgo del mercado que BSM no captura."
+        "revelando las primas de riesgo de cola que el modelo BSM clásico no logra capturar."
     )
     separador()
 
@@ -1295,7 +1295,7 @@ with tab_vol:
     with col_v1:
         st.markdown("**Parámetros del mercado**")
         S_vol   = st.number_input("Precio Spot ($S_0$)", min_value=0.01,
-                                   value=100.0, step=1.0, key="vol_S")
+                                   value=st.session_state.get("vol_S_key", 100.0), step=1.0, key="vol_S")
         r_vol   = st.number_input("Tasa libre de riesgo ($r$) %",
                                    value=5.0, step=0.1, key="vol_r") / 100
         q_vol   = st.number_input("Dividendo continuo ($q$) %",
@@ -1308,9 +1308,9 @@ with tab_vol:
     with col_v2:
         st.markdown("**Cálculo de σ implícita — una sola opción**")
         K_vol      = st.number_input("Strike ($K$)", min_value=0.01,
-                                      value=100.0, step=1.0, key="vol_K")
+                                      value=st.session_state.get("vol_K_key", 100.0), step=1.0, key="vol_K")
         precio_mkt = st.number_input("Precio de mercado de la opción ($)",
-                                      min_value=0.001, value=10.0,
+                                      min_value=0.001, value=st.session_state.get("vol_precio_key", 10.0),
                                       step=0.5, key="vol_precio")
         # Calcular vol implícita
         def _bsm_price(sigma):
@@ -1346,17 +1346,25 @@ with tab_vol:
     with col_v3:
         st.markdown("**Cargar datos reales (Yahoo Finance)**")
         ticker_vol = st.text_input("Ticker:", value="AAPL", key="vol_tick").strip().upper()
-        btn_vol_yf = st.button("Obtener S₀ y σ histórica", key="btn_vol_yf")
+        btn_vol_yf = st.button("Obtener S₀ y simular Precio de Mercado", key="btn_vol_yf")
         if btn_vol_yf:
             with st.spinner("Descargando..."):
                 sv, vv = engine.obtener_datos_subyacente(ticker_vol)
                 if sv is not None:
+                    # Configurar variables en memoria
                     st.session_state["vol_S_key"] = float(sv)
-                    st.session_state["vol_sig_key"] = float(vv * 100)
+                    st.session_state["vol_K_key"] = float(sv) # Strike ATM
+                    
+                    # MAGIA: Simulamos el precio de mercado inyectando una prima de riesgo del +5% de volatilidad
+                    precio_mercado_simulado = engine.black_scholes(sv, sv, r_vol, vv + 0.05, T_vol, es_call_vol, q_vol)
+                    st.session_state["vol_precio_key"] = float(precio_mercado_simulado)
+                    
                     themed_success(
-                        f"**{ticker_vol}** — S₀ = ${sv:,.2f} | σ hist = {vv*100:.2f}%  \n"
-                        "Actualiza el campo Spot arriba con estos valores."
+                        f"**{ticker_vol}** cargado con éxito. \n"
+                        f"Spot ($S_0$) y Strike ($K$) fijados en **${sv:,.2f}**.\n\n"
+                        f"**NOTA:** Se calculó un Precio de Mercado simulado asumiendo un 5% de prima de riesgo sobre la Vol. Histórica ({vv*100:.2f}%)."
                     )
+                    st.rerun()
                 else:
                     themed_error(f"No se encontró {ticker_vol}.")
 
@@ -1377,7 +1385,8 @@ with tab_vol:
     strikes_def = [round(S_vol * (1 + p/100), 2) for p in strikes_pct_def]
 
     # Generate default prices using a vol smile (higher for OTM puts)
-    sig_atm = 0.20
+    # If the user used the button, we anchor the smile to their newly generated implied volatility
+    sig_atm = sig_impl if sig_impl else 0.20
     def _smile_vol(K):
         m = np.log(K / S_vol)
         return sig_atm + 0.04 * m**2 - 0.01 * m  # synthetic smile
@@ -1474,7 +1483,7 @@ with tab_vol:
         for K_s in K_vals:
             # Synthetic smile that changes with T (term structure)
             m_s = np.log(K_s/S_vol) / np.sqrt(T_s)
-            sigma_s = 0.20 + 0.03*m_s**2 - 0.008*m_s + 0.005/T_s
+            sigma_s = sig_atm + 0.03*m_s**2 - 0.008*m_s + 0.005/T_s
             row_s.append(sigma_s*100)
         surf_z.append(row_s)
 
