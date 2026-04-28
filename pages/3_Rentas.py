@@ -52,7 +52,7 @@ def _inputs_tasa_nominal(sufijo: str):
     i_nom = st.number_input("Tasa nominal anual ($i^{(m)}$) %", value=12.0, step=0.1, key=f"inom_{sufijo}") / 100
     n     = st.number_input("Años ($n$)", min_value=0.0, value=5.0, step=1.0, key=f"n_nom_{sufijo}")
     m     = st.number_input("Periodos por año ($m$)", min_value=1.0, value=12.0, step=1.0, key=f"m_nom_{sufijo}")
-    return i_nom / m, n * m, m
+    return i_nom / m, n * m, m, i_nom
 
 def _inputs_tasa_efectiva_pq(sufijo: str):
     im = st.number_input("Tasa efec. interés ($i_m$) %", value=1.0, step=0.1, key=f"im_geo_{sufijo}") / 100
@@ -73,6 +73,13 @@ def _inputs_tasa_nominal_pq(sufijo: str):
 # TAB 1 — VALOR FUTURO
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_vf:
+    st.markdown("### Valor futuro de Rentas y Anualidades")
+    themed_success(
+        "El **Valor Futuro (Monto Acumulado)** determina la capitalización total al final de un plazo si "
+        "realizas depósitos periódicos secuenciales (<span style='font-family: serif; font-style: italic;'>R</span>) "
+        "y reinviertes los intereses generados a una tasa específica."
+    )
+    
     tipo_vf = st.radio("Tipo de Renta:", ["Constantes Periódicas", "Crecientes Geométricas", "Crecientes Aritméticas"], horizontal=True, key="radio_tipo_vf")
     separador()
 
@@ -80,9 +87,11 @@ with tab_vf:
     # VF — CONSTANTES
     # ──────────────────────────────────────────────
     if tipo_vf == "Constantes Periódicas":
-        escenario = st.selectbox("Selecciona el escenario:", [
+        escenario = st.selectbox("Selecciona el escenario de capitalización:", [
             "Vencidas a tasa efectiva im",
             "Anticipadas a tasa efectiva im",
+            "Vencidas a tasa nominal i(m)",
+            "Anticipadas a tasa nominal i(m)",
             "Vencidas pagaderas p veces al año a tasa nominal i(m)",
             "Continuas a tasa instantánea δ",
         ], key="sel_const_vf")
@@ -92,14 +101,24 @@ with tab_vf:
             R_vf = st.number_input("Pago periódico ($R$)", min_value=0.0, value=1_000.0, step=100.0, key="R_vf_const")
 
             if escenario == "Vencidas a tasa efectiva im":
-                im_vf, nm_vf, _ = _inputs_tasa_efectiva("vf_vec")
+                im_vf, nm_vf, _ = _inputs_tasa_efectiva("vf_vec_e")
                 vf_res   = engine.vf_anualidad_efectiva(R_vf, im_vf, nm_vf, anticipada=False)
                 formula  = r"VF = R \left[ \frac{(1+i_m)^{nm} - 1}{i_m} \right]"
 
             elif escenario == "Anticipadas a tasa efectiva im":
-                im_vf, nm_vf, _ = _inputs_tasa_efectiva("vf_ant")
+                im_vf, nm_vf, _ = _inputs_tasa_efectiva("vf_ant_e")
                 vf_res  = engine.vf_anualidad_efectiva(R_vf, im_vf, nm_vf, anticipada=True)
                 formula = r"VF = R \left[ \frac{(1+i_m)^{nm} - 1}{i_m} \right](1+i_m)"
+
+            elif escenario == "Vencidas a tasa nominal i(m)":
+                im_vf, nm_vf, m_cap, i_nom_vf = _inputs_tasa_nominal("vf_vec_n")
+                vf_res   = engine.vf_anualidad_efectiva(R_vf, im_vf, nm_vf, anticipada=False)
+                formula  = r"VF = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right]"
+
+            elif escenario == "Anticipadas a tasa nominal i(m)":
+                im_vf, nm_vf, m_cap, i_nom_vf = _inputs_tasa_nominal("vf_ant_n")
+                vf_res  = engine.vf_anualidad_efectiva(R_vf, im_vf, nm_vf, anticipada=True)
+                formula = r"VF = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right]\left(1+\frac{i^{(m)}}{m}\right)"
 
             elif escenario == "Vencidas pagaderas p veces al año a tasa nominal i(m)":
                 i_nom_vf = st.number_input("Tasa nominal ($i^{(m)}$) %", value=12.0, step=0.1, key="inom_vf_p") / 100
@@ -133,10 +152,22 @@ with tab_vf:
 
         with paso_a_paso():
             st.latex(formula)
-            if escenario in ("Vencidas a tasa efectiva im", "Anticipadas a tasa efectiva im", "Vencidas pagaderas p veces al año a tasa nominal i(m)"):
+            if "nominal i(m)" in escenario and "pagaderas" not in escenario:
+                anticipada_str = rf"\left(1+\frac{{{i_nom_vf:.4f}}}{{{m_cap:g}}}\right)" if "Anticipadas" in escenario else ""
+                st.latex(rf"VF = {R_vf:,.2f} \left[ \frac{{\left(1+\frac{{{i_nom_vf:.4f}}}{{{m_cap:g}}}\right)^{{{nm_vf:g}}} - 1}}{{\frac{{{i_nom_vf:.4f}}}{{{m_cap:g}}}}} \right]" + anticipada_str)
+                anticipada_str2 = rf"(1+{im_vf:.6f})" if "Anticipadas" in escenario else ""
+                st.latex(rf"VF = {R_vf:,.2f} \left[ \frac{{(1+{im_vf:.6f})^{{{nm_vf:g}}} - 1}}{{{im_vf:.6f}}} \right]" + anticipada_str2)
+                
+                cap_n = (1 + im_vf)**nm_vf
+                factor = (cap_n - 1) / im_vf
+                st.latex(rf"VF = {R_vf:,.2f} \left[ \frac{{{cap_n:.6f} - 1}}{{{im_vf:.6f}}} \right]" + anticipada_str2)
+                st.latex(rf"VF = {R_vf:,.2f} [{factor:.6f}]" + anticipada_str2)
+
+            elif escenario in ("Vencidas a tasa efectiva im", "Anticipadas a tasa efectiva im", "Vencidas pagaderas p veces al año a tasa nominal i(m)"):
                 if "pagaderas" in escenario:
                     st.latex(rf"i_p = \left(1 + \frac{{{i_nom_vf:.4f}}}{{{m_cap:g}}}\right)^{{\frac{{{m_cap:g}}}{{{p_pag:g}}}}} - 1 = {i_p:.6f}")
                     st.latex(rf"np = {n_anios:g} \times {p_pag:g} = {nm_vf:g}")
+                    st.write("---")
                 
                 cap_n = (1 + im_vf)**nm_vf
                 factor = (cap_n - 1) / im_vf
@@ -159,6 +190,7 @@ with tab_vf:
                     st.latex(rf"VF = {R_anual:,.2f} [{factor:.6f}]")
                 else:
                     st.latex(rf"\delta = \ln(1 + {i_eff_vf:.4f}) = {delta_vf:.6f}")
+                    st.write("---")
                     cap_n = (1 + i_eff_vf)**n_cont
                     factor = (cap_n - 1) / delta_vf
                     st.latex(rf"VF = {R_anual:,.2f} \left[ \frac{{(1 + {i_eff_vf:.4f})^{{{n_cont:g}}} - 1}}{{{delta_vf:.6f}}} \right]")
@@ -230,7 +262,7 @@ with tab_vf:
                 str_i_a = r"i_m"
                 val_i_a = f"{im_arit:.4f}"
             else:
-                im_arit, nm_arit, _ = _inputs_tasa_nominal("arit_vf_n")
+                im_arit, nm_arit, _, _ = _inputs_tasa_nominal("arit_vf_n")
                 str_i_a = r"\frac{i^{(m)}}{m}"
                 val_i_a = f"{im_arit:.6f}"
 
@@ -258,6 +290,13 @@ with tab_vf:
 # TAB 2 — VALOR PRESENTE
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_vp:
+    st.markdown("### Valor presente de Rentas y Anualidades")
+    themed_info(
+        "El **Valor Presente (Capital)** determina matemáticamente el fondeo necesario hoy "
+        "para sostener una serie de retiros periódicos (<span style='font-family: serif; font-style: italic;'>R</span>) "
+        "en el futuro hasta agotar el principal, descontando el efecto temporal a una tasa de interés de mercado."
+    )
+    
     tipo_vp = st.radio("Tipo de Renta:", ["Constantes Periódicas", "Crecientes Geométricas", "Crecientes Aritméticas"], horizontal=True, key="radio_tipo_vp")
     separador()
 
@@ -265,10 +304,13 @@ with tab_vp:
     # VP — CONSTANTES
     # ──────────────────────────────────────────────
     if tipo_vp == "Constantes Periódicas":
-        escenario_vp = st.selectbox("Selecciona el escenario:", [
+        escenario_vp = st.selectbox("Selecciona el escenario de actualización:", [
             "Vencidas a tasa efectiva im",
             "Anticipadas a tasa efectiva im",
+            "Vencidas a tasa nominal i(m)",
+            "Anticipadas a tasa nominal i(m)",
             "Perpetuas a tasa efectiva im",
+            "Perpetuas a tasa nominal i(m)",
             "Vencidas pagaderas p veces al año a tasa nominal i(m)",
             "Continuas a tasa instantánea δ o efectiva i",
         ], key="sel_const_vp")
@@ -278,21 +320,37 @@ with tab_vp:
             R_vp = st.number_input("Pago periódico ($R$)", min_value=0.0, value=1_000.0, step=100.0, key="R_vp_const")
 
             if escenario_vp == "Vencidas a tasa efectiva im":
-                im_vp, nm_vp, _ = _inputs_tasa_efectiva("vp_vec")
+                im_vp, nm_vp, _ = _inputs_tasa_efectiva("vp_vec_e")
                 vp_res  = engine.vp_anualidad_efectiva(R_vp, im_vp, nm_vp, anticipada=False)
                 formula_vp = r"VP = R \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right]"
 
             elif escenario_vp == "Anticipadas a tasa efectiva im":
-                im_vp, nm_vp, _ = _inputs_tasa_efectiva("vp_ant")
+                im_vp, nm_vp, _ = _inputs_tasa_efectiva("vp_ant_e")
                 vp_res  = engine.vp_anualidad_efectiva(R_vp, im_vp, nm_vp, anticipada=True)
                 formula_vp = r"VP = R \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right](1+i_m)"
 
+            elif escenario_vp == "Vencidas a tasa nominal i(m)":
+                im_vp, nm_vp, m_cap, i_nom_vp = _inputs_tasa_nominal("vp_vec_n")
+                vp_res  = engine.vp_anualidad_efectiva(R_vp, im_vp, nm_vp, anticipada=False)
+                formula_vp = r"VP = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]"
+
+            elif escenario_vp == "Anticipadas a tasa nominal i(m)":
+                im_vp, nm_vp, m_cap, i_nom_vp = _inputs_tasa_nominal("vp_ant_n")
+                vp_res  = engine.vp_anualidad_efectiva(R_vp, im_vp, nm_vp, anticipada=True)
+                formula_vp = r"VP = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]\left(1+\frac{i^{(m)}}{m}\right)"
+
             elif escenario_vp == "Perpetuas a tasa efectiva im":
-                i_nom_pp = st.number_input("Tasa nominal ($i^{(m)}$) %", value=12.0, step=0.1, key="inom_perp") / 100
-                m_pp     = st.number_input("Periodos por año ($m$)", min_value=1.0, value=12.0, step=1.0, key="m_perp")
-                im_vp, nm_vp = i_nom_pp / m_pp, 0
+                im_vp = st.number_input("Tasa efectiva periódica ($i_m$) %", value=1.0, step=0.1, key="im_perp_e") / 100
+                nm_vp = 0
                 vp_res   = engine.vp_perpetuidad(R_vp, im_vp)
                 formula_vp = r"VP = \frac{R}{i_m}"
+
+            elif escenario_vp == "Perpetuas a tasa nominal i(m)":
+                i_nom_pp = st.number_input("Tasa nominal ($i^{(m)}$) %", value=12.0, step=0.1, key="inom_perp_n") / 100
+                m_pp     = st.number_input("Periodos por año ($m$)", min_value=1.0, value=12.0, step=1.0, key="m_perp_n")
+                im_vp, nm_vp = i_nom_pp / m_pp, 0
+                vp_res   = engine.vp_perpetuidad(R_vp, im_vp)
+                formula_vp = r"VP = \frac{R}{\frac{i^{(m)}}{m}}"
 
             elif escenario_vp == "Vencidas pagaderas p veces al año a tasa nominal i(m)":
                 i_nom_vp2 = st.number_input("Tasa nominal ($i^{(m)}$) %", value=12.0, step=0.1, key="inom_vp_p") / 100
@@ -325,11 +383,24 @@ with tab_vp:
             st.latex(formula_vp)
 
         with paso_a_paso():
-            if escenario_vp in ("Vencidas a tasa efectiva im", "Anticipadas a tasa efectiva im", "Vencidas pagaderas p veces al año a tasa nominal i(m)"):
-                st.latex(formula_vp)
+            st.latex(formula_vp)
+
+            if "nominal i(m)" in escenario_vp and "pagaderas" not in escenario_vp and "Perpetuas" not in escenario_vp:
+                anticipada_str = rf"\left(1+\frac{{{i_nom_vp:.4f}}}{{{m_cap:g}}}\right)" if "Anticipadas" in escenario_vp else ""
+                st.latex(rf"VP = {R_vp:,.2f} \left[ \frac{{1 - \left(1+\frac{{{i_nom_vp:.4f}}}{{{m_cap:g}}}\right)^{{-{nm_vp:g}}}}}{{\frac{{{i_nom_vp:.4f}}}{{{m_cap:g}}}}} \right]" + anticipada_str)
+                anticipada_str2 = rf"(1+{im_vp:.6f})" if "Anticipadas" in escenario_vp else ""
+                st.latex(rf"VP = {R_vp:,.2f} \left[ \frac{{1 - (1+{im_vp:.6f})^{{-{nm_vp:g}}}}}{{{im_vp:.6f}}} \right]" + anticipada_str2)
+                
+                desc_n = (1 + im_vp)**(-nm_vp)
+                factor = (1 - desc_n) / im_vp
+                st.latex(rf"VP = {R_vp:,.2f} \left[ \frac{{1 - {desc_n:.6f}}}{{{im_vp:.6f}}} \right]" + anticipada_str2)
+                st.latex(rf"VP = {R_vp:,.2f} [{factor:.6f}]" + anticipada_str2)
+
+            elif escenario_vp in ("Vencidas a tasa efectiva im", "Anticipadas a tasa efectiva im", "Vencidas pagaderas p veces al año a tasa nominal i(m)"):
                 if "pagaderas" in escenario_vp:
                     st.latex(rf"i_p = \left(1 + \frac{{{i_nom_vp2:.4f}}}{{{m_cap_vp:g}}}\right)^{{\frac{{{m_cap_vp:g}}}{{{p_pag_vp:g}}}}} - 1 = {i_p_vp:.6f}")
                     st.latex(rf"np = {n_anios_vp:g} \times {p_pag_vp:g} = {nm_vp:g}")
+                    st.write("---")
 
                 desc_n = (1 + im_vp)**(-nm_vp)
                 factor = (1 - desc_n) / im_vp
@@ -344,11 +415,13 @@ with tab_vp:
                     st.latex(rf"VP = {R_vp:,.2f} [{factor:.6f}]")
 
             elif escenario_vp == "Perpetuas a tasa efectiva im":
-                st.latex(formula_vp)
+                st.latex(rf"VP = \frac{{{R_vp:,.2f}}}{{{im_vp:.6f}}}")
+
+            elif escenario_vp == "Perpetuas a tasa nominal i(m)":
+                st.latex(rf"VP = \frac{{{R_vp:,.2f}}}{{\frac{{{i_nom_pp:.4f}}}{{{m_pp:g}}}}}")
                 st.latex(rf"VP = \frac{{{R_vp:,.2f}}}{{{im_vp:.6f}}}")
             
             else: # Continuas
-                st.latex(formula_vp)
                 if tipo_t_vp == "Tasa instantánea (δ)":
                     desc_n = np.exp(-delta_vp * n_cont_vp)
                     factor = (1 - desc_n) / delta_vp
@@ -357,6 +430,7 @@ with tab_vp:
                     st.latex(rf"VP = {R_anual_vp:,.2f} [{factor:.6f}]")
                 else:
                     st.latex(rf"\delta = \ln(1 + {i_eff_vp:.4f}) = {delta_vp:.6f}")
+                    st.write("---")
                     desc_n = (1 + i_eff_vp)**(-n_cont_vp)
                     factor = (1 - desc_n) / delta_vp
                     st.latex(rf"VP = {R_anual_vp:,.2f} \left[ \frac{{1 - (1 + {i_eff_vp:.4f})^{{-{n_cont_vp:g}}}}}{{{delta_vp:.6f}}} \right]")
@@ -430,7 +504,7 @@ with tab_vp:
                 str_i_av = r"i_m"
                 val_i_av = f"{im_arit_vp:.4f}"
             else:
-                im_arit_vp, nm_arit_vp, _ = _inputs_tasa_nominal("arit_vp_n")
+                im_arit_vp, nm_arit_vp, _, _ = _inputs_tasa_nominal("arit_vp_n")
                 str_i_av = r"\frac{i^{(m)}}{m}"
                 val_i_av = f"{im_arit_vp:.6f}"
 
@@ -460,6 +534,11 @@ with tab_vp:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_n:
     st.markdown("### Determinación del número de periodos ($n$) en Rentas")
+    themed_info(
+        "Despeja la variable de tiempo (<span style='font-family: serif; font-style: italic;'>n</span>) "
+        "en las ecuaciones de anualidades utilizando propiedades logarítmicas. En los modelos asimétricos o con gradientes "
+        "donde no existe un despeje analítico posible, el motor converge el resultado iterando numéricamente."
+    )
 
     c_top1, c_top2 = st.columns(2)
     base_n      = c_top1.selectbox("Calcular $n$ desde:", ["Valor Futuro (Monto Acumulado)", "Valor Presente (Capital Inicial)"], key="sel_base_n")
@@ -533,7 +612,7 @@ with tab_n:
                 formula_n   = r"f(nm)=VP(nm)-VP_{objetivo}=0"
 
         if np.isnan(n_res_total):
-            themed_error("El monto objetivo es inalcanzable con estos parámetros.")
+            themed_error("El monto objetivo es inalcanzable con la configuración de rentas y tasas actuales.")
         else:
             themed_info(f"<h3 style='margin:0; color:inherit;'>Total de Periodos (nm): {n_res_total:.4f}</h3>")
             
@@ -563,9 +642,9 @@ with tab_n:
                     themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>nm = {n_res_total:.4f}</h4>")
                 else:
                     st.latex(r"f(nm) = \text{Valor}_\text{renta}(nm) - \text{Objetivo} = 0")
-                    themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>nm ≈ {n_res_total:.4f} (Iteración Numérica)</h4>")
+                    themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>nm \approx {n_res_total:.4f} \text{{ (Numérico)}}</h4>")
 
             # Desglose del tiempo (meses, días)
-            st.markdown("**Desglose exacto del tiempo:**")
+            st.markdown("**Desglose exacto temporal:**")
             df_n = engine.desglosar_periodos(anios_decimal)
             st.dataframe(df_n.style.set_properties(**{"background-color": "#F3F4F6", "color": "#1E3A8A", "font-weight": "bold", "text-align": "center"}), use_container_width=True, hide_index=True)

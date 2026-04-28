@@ -35,6 +35,15 @@ page_header(
 # =============================================================================
 # CONTROLES PRINCIPALES
 # =============================================================================
+st.markdown("### Configuración del Crédito")
+themed_info(
+    "Una **Tabla de Amortización** desglosa cada uno de los pagos de un crédito para mostrarte "
+    "exactamente qué cantidad se destina a pagar los intereses y qué cantidad reduce tu deuda real (capital).<br><br>"
+    "Aquí puedes calcular de cuánto será tu mensualidad (<span style='font-family: serif; font-style: italic;'>R</span>) si pides "
+    "un préstamo (<span style='font-family: serif; font-style: italic;'>VP</span>), o viceversa."
+)
+separador()
+
 col_modo, col_tasa = st.columns(2)
 
 with col_modo:
@@ -96,7 +105,7 @@ with c1:
             themed_error("El enganche debe ser menor al valor total del bien.")
             st.stop()
 
-        themed_success(f"**Monto a financiar (VP):** ${vp_neto:,.2f}")
+        themed_info(f"**Monto a financiar (VP):** ${vp_neto:,.2f}")
 
     else:
         st.markdown("**Pago periódico conocido**")
@@ -151,7 +160,7 @@ separador()
 # =============================================================================
 # RESULTADO PRINCIPAL: R o VP
 # =============================================================================
-st.markdown("### Cálculo matemático")
+st.markdown("### Cálculo Matemático")
 
 col_form, col_res = st.columns([2, 1])
 
@@ -170,8 +179,10 @@ if "Pago Fijo (R)  →  conozco el Préstamo (VP)" in modo:
     )
 
     with col_form:
-        st.latex(formula_amort)
-        with paso_a_paso("Ver desarrollo paso a paso"):
+        themed_success(f"<h3 style='margin:0; color:inherit;'>Pago Periódico Fijo (R): ${pago_R:,.2f}</h3>")
+        
+        with paso_a_paso():
+            st.latex(formula_amort)
             st.latex(
                 rf"R = {vp_neto:,.2f} \left[ \frac{{{str_val_t}}}"
                 rf"{{1 - \left(1+{str_val_t}\right)^{{-{nm_am:g}}}}} \right]"
@@ -180,13 +191,13 @@ if "Pago Fijo (R)  →  conozco el Préstamo (VP)" in modo:
                 v_n = (1 + tasa_periodo) ** (-nm_am)
                 factor = tasa_periodo / (1 - v_n)
                 st.latex(
-                    rf"R = {vp_neto:,.2f} \times \left[ \frac{{{tasa_periodo:.6f}}}"
+                    rf"R = {vp_neto:,.2f} \left[ \frac{{{tasa_periodo:.6f}}}"
                     rf"{{1 - (1 + {tasa_periodo:.6f})^{{-{nm_am:g}}}}} \right]"
                 )
-                st.latex(rf"R = {vp_neto:,.2f} \times \left[ \frac{{{tasa_periodo:.6f}}}{{1 - {v_n:.6f}}} \right]")
-                st.latex(rf"R = {vp_neto:,.2f} \times {factor:.6f}")
+                st.latex(rf"R = {vp_neto:,.2f} \left[ \frac{{{tasa_periodo:.6f}}}{{1 - {v_n:.6f}}} \right]")
+                st.latex(rf"R = {vp_neto:,.2f} ({factor:.6f}) = {pago_R:.2f}")
                 
-        themed_info(f"<h3 style='margin:0; color:inherit;'>Pago Periódico (R): ${pago_R:,.2f}</h3>")
+            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>R = ${pago_R:,.2f}</h4>")
 
     with col_res:
         st.metric("Total pagado al final", f"${pago_R * nm_am:,.2f}")
@@ -208,8 +219,10 @@ else:
     )
 
     with col_form:
-        st.latex(formula_amort)
-        with paso_a_paso("Ver desarrollo paso a paso"):
+        themed_info(f"<h3 style='margin:0; color:inherit;'>Préstamo a Financiar (VP): ${vp_calc:,.2f}</h3>")
+        
+        with paso_a_paso():
+            st.latex(formula_amort)
             st.latex(
                 rf"VP = {R_conocido:,.2f} \left[ \frac{{1 - \left(1+{str_val_t}\right)"
                 rf"^{{-{nm_am:g}}}}}{{{str_val_t}}} \right]"
@@ -218,13 +231,13 @@ else:
                 v_n = (1 + tasa_periodo) ** (-nm_am)
                 factor_vp = (1 - v_n) / tasa_periodo
                 st.latex(
-                    rf"VP = {R_conocido:,.2f} \times \left[ \frac{{1 - "
+                    rf"VP = {R_conocido:,.2f} \left[ \frac{{1 - "
                     rf"(1 + {tasa_periodo:.6f})^{{-{nm_am:g}}}}}{{{tasa_periodo:.6f}}} \right]"
                 )
-                st.latex(rf"VP = {R_conocido:,.2f} \times \left[ \frac{{1 - {v_n:.6f}}}{{{tasa_periodo:.6f}}} \right]")
-                st.latex(rf"VP = {R_conocido:,.2f} \times {factor_vp:.6f}")
+                st.latex(rf"VP = {R_conocido:,.2f} \left[ \frac{{1 - {v_n:.6f}}}{{{tasa_periodo:.6f}}} \right]")
+                st.latex(rf"VP = {R_conocido:,.2f} ({factor_vp:.6f}) = {vp_calc:.2f}")
                 
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Monto a Financiar (VP): ${vp_calc:,.2f}</h3>")
+            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_calc:,.2f}</h4>")
 
     with col_res:
         st.metric("Total pagado al final", f"${pago_R * nm_am:,.2f}")
@@ -234,12 +247,12 @@ else:
 # TABLA Y GRÁFICA DE AMORTIZACIÓN
 # =============================================================================
 separador()
-st.markdown("### Tabla y Gráfica de Amortización")
+st.markdown("### Resultados Detallados")
 
 # Asumimos que tu engine devuelve un DataFrame de pandas
 df_amort = engine.tabla_amortizacion(vp_final, tasa_periodo, nm_am)
 
-tab_tabla, tab_grafica = st.tabs(["Tabla Detallada", "Gráfica de Composición"])
+tab_tabla, tab_grafica = st.tabs(["Tabla de Amortización", "Composición del Pago"])
 
 with tab_tabla:
     # Resumen rápido antes de la tabla
@@ -269,7 +282,7 @@ with tab_grafica:
             df_amort,
             x="Periodo",
             y=["Amortización", "Interés"],
-            title="Composición del Pago a lo largo del tiempo",
+            title="Composición de tu cuota a lo largo del tiempo",
             labels={"value": "Monto ($)", "variable": "Componente"},
             color_discrete_map={
                 "Amortización": "#4ECDC4",
@@ -283,7 +296,6 @@ with tab_grafica:
             hovermode="x unified",
         )
         
-        # Opcional: si apply_plotly_theme llega a fallar, puedes quitar la siguiente línea
         try:
             fig = apply_plotly_theme(fig)
         except Exception:
@@ -292,14 +304,12 @@ with tab_grafica:
         st.plotly_chart(fig, use_container_width=True)
 
         with st.expander("¿Cómo interpretar esta gráfica?"):
-            themed_info(
+            st.markdown(
                 "**El comportamiento clásico de un crédito:**\n\n"
-                "Aunque el pago mensual que haces siempre es el mismo, "
-                "su composición cambia con el tiempo:\n\n"
-                "- **Al inicio:** La mayor parte se va a intereses (zona roja) "
-                "porque el saldo insoluto es grande. Se amortiza muy poco capital.\n\n"
-                "- **Al final:** Los intereses bajan porque la deuda es pequeña, "
-                "y la mayor parte del pago (zona verde) liquida capital directamente."
+                "Aunque el pago que le haces al banco siempre es de la misma cantidad, "
+                "por dentro, su composición cambia con cada periodo que pasa:\n\n"
+                "- **Al inicio:** El saldo de tu deuda es muy grande, por lo que casi todo tu pago se destina a cubrir intereses (zona roja). Se abona muy poco a la deuda real.\n"
+                "- **Al final:** Como el saldo de la deuda ya es pequeño, los intereses bajan considerablemente y casi todo tu pago se va directamente a liquidar el capital (zona verde)."
             )
     else:
         themed_warning("No se pudo generar la gráfica. Asegúrate de que tu motor devuelve las columnas: 'Periodo', 'Amortización' e 'Interés'.")

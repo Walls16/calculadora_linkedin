@@ -41,7 +41,11 @@ t1, t2, t3, t4 = st.tabs([
 # TAB 1: VALOR FUTURO
 # ─────────────────────────────────────────────────────────────────────────────
 with t1:
-    st.markdown("### Valor futuro de una inversión inicial $C_0$")
+    st.markdown("### Valor futuro de una inversión inicial")
+    themed_success(
+        "El **Valor Futuro (VF)** proyecta cuánto valdrá un capital inicial (<span style='font-family: serif; font-style: italic;'>C<sub>0</sub></span>) "
+        "en el futuro, sumando los rendimientos generados por el interés compuesto a una tasa dada."
+    )
 
     escenario_vf = st.radio(
         "Tipo de tasa:",
@@ -68,9 +72,9 @@ with t1:
             st.latex(formula_vf)
 
         with paso_a_paso():
-            st.latex(r"VF = C_0 (1+i)^n")
-            st.latex(rf"VF = {C0_vf:,.2f} \times (1 + {i_vf:.4f})^{{{n_vf:g}}}")
-            st.latex(rf"VF = {C0_vf:,.2f} \times {(1+i_vf)**n_vf:.6f}")
+            st.latex(formula_vf)
+            st.latex(rf"VF = {C0_vf:,.2f} (1 + {i_vf:.4f})^{{{n_vf:g}}}")
+            st.latex(rf"VF = {C0_vf:,.2f} ({(1+i_vf)**n_vf:.6f})")
             themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_res:,.2f}</h4>")
 
     # ── Nominal ───────────────────────────────────────────
@@ -91,9 +95,10 @@ with t1:
             st.latex(formula_vf)
 
         with paso_a_paso():
+            st.latex(formula_vf)
             st.latex(rf"VF = {C0_vf:,.2f} \left(1 + \frac{{{i_nom_vf:.4f}}}{{{m_vf:g}}}\right)^{{{n_vf2:g} \times {m_vf:g}}}")
-            st.latex(rf"VF = {C0_vf:,.2f} \times (1 + {im_vf:.6f})^{{{nm_vf:g}}}")
-            st.latex(rf"VF = {C0_vf:,.2f} \times {(1+im_vf)**nm_vf:.6f}")
+            st.latex(rf"VF = {C0_vf:,.2f} (1 + {im_vf:.6f})^{{{nm_vf:g}}}")
+            st.latex(rf"VF = {C0_vf:,.2f} ({(1+im_vf)**nm_vf:.6f})")
             themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_res:,.2f}</h4>")
 
     # ── Instantánea ───────────────────────────────────────
@@ -111,9 +116,10 @@ with t1:
             st.latex(formula_vf)
 
         with paso_a_paso():
-            st.latex(rf"VF = {C0_vf:,.2f} \times e^{{({d_vf:.4f} \times {n_vf3:g})}}")
-            st.latex(rf"VF = {C0_vf:,.2f} \times e^{{{d_vf*n_vf3:.6f}}}")
-            st.latex(rf"VF = {C0_vf:,.2f} \times {np.exp(d_vf*n_vf3):.6f}")
+            st.latex(formula_vf)
+            st.latex(rf"VF = {C0_vf:,.2f} e^{{({d_vf:.4f})({n_vf3:g})}}")
+            st.latex(rf"VF = {C0_vf:,.2f} e^{{{d_vf*n_vf3:.6f}}}")
+            st.latex(rf"VF = {C0_vf:,.2f} ({np.exp(d_vf*n_vf3):.6f})")
             themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_res:,.2f}</h4>")
 
 
@@ -121,7 +127,12 @@ with t1:
 # TAB 2: VALOR PRESENTE
 # ─────────────────────────────────────────────────────────────────────────────
 with t2:
-    st.markdown("### Valor presente de una cantidad de dinero futura $C_n$")
+    st.markdown("### Valor presente de una cantidad de dinero futura")
+    themed_info(
+        "El **Valor Presente (VP)** es el proceso inverso (descuento). Determina cuánto dinero "
+        "necesitas invertir hoy para alcanzar un monto objetivo (<span style='font-family: serif; font-style: italic;'>C<sub>n</sub></span>) "
+        "en el futuro, descontando el efecto de la tasa de interés."
+    )
 
     escenario_vp = st.radio(
         "Tipo de tasa:",
@@ -148,9 +159,9 @@ with t2:
             st.latex(formula_vp)
 
         with paso_a_paso():
-            st.latex(r"VP = C_n (1+i)^{-n}")
-            st.latex(rf"VP = {Cn_vp:,.2f} \times (1 + {i_vp:.4f})^{{-{n_vp:g}}}")
-            st.latex(rf"VP = {Cn_vp:,.2f} \times {(1+i_vp)**(-n_vp):.6f}")
+            st.latex(formula_vp)
+            st.latex(rf"VP = {Cn_vp:,.2f} (1 + {i_vp:.4f})^{{-{n_vp:g}}}")
+            st.latex(rf"VP = {Cn_vp:,.2f} ({(1+i_vp)**(-n_vp):.6f})")
             themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_res:,.2f}</h4>")
 
     # ── Nominal ───────────────────────────────────────────
@@ -171,9 +182,10 @@ with t2:
             st.latex(formula_vp)
 
         with paso_a_paso():
+            st.latex(formula_vp)
             st.latex(rf"VP = {Cn_vp:,.2f} \left(1 + \frac{{{i_nom_vp:.4f}}}{{{m_vp:g}}}\right)^{{-({n_vp2:g} \times {m_vp:g})}}")
-            st.latex(rf"VP = {Cn_vp:,.2f} \times (1 + {im_vp:.6f})^{{-{nm_vp:g}}}")
-            st.latex(rf"VP = {Cn_vp:,.2f} \times {(1+im_vp)**(-nm_vp):.6f}")
+            st.latex(rf"VP = {Cn_vp:,.2f} (1 + {im_vp:.6f})^{{-{nm_vp:g}}}")
+            st.latex(rf"VP = {Cn_vp:,.2f} ({(1+im_vp)**(-nm_vp):.6f})")
             themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_res:,.2f}</h4>")
 
     # ── Instantánea ───────────────────────────────────────
@@ -191,9 +203,10 @@ with t2:
             st.latex(formula_vp)
 
         with paso_a_paso():
-            st.latex(rf"VP = {Cn_vp:,.2f} \times e^{{-({d_vp:.4f} \times {n_vp3:g})}}")
-            st.latex(rf"VP = {Cn_vp:,.2f} \times e^{{-{d_vp*n_vp3:.6f}}}")
-            st.latex(rf"VP = {Cn_vp:,.2f} \times {np.exp(-d_vp*n_vp3):.6f}")
+            st.latex(formula_vp)
+            st.latex(rf"VP = {Cn_vp:,.2f} e^{{-({d_vp:.4f})({n_vp3:g})}}")
+            st.latex(rf"VP = {Cn_vp:,.2f} e^{{-{d_vp*n_vp3:.6f}}}")
+            st.latex(rf"VP = {Cn_vp:,.2f} ({np.exp(-d_vp*n_vp3):.6f})")
             themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_res:,.2f}</h4>")
 
 
@@ -202,6 +215,10 @@ with t2:
 # ─────────────────────────────────────────────────────────────────────────────
 with t3:
     st.markdown("### Determinación del número de periodos de una inversión")
+    themed_info(
+        "Despeja la variable de tiempo (<span style='font-family: serif; font-style: italic;'>n</span>) "
+        "de la ecuación de interés compuesto utilizando las propiedades de los logaritmos."
+    )
 
     c1, c2 = st.columns(2)
 
@@ -212,27 +229,28 @@ with t3:
 
     with c2:
         n_res = engine.numero_periodos(va_nper, vf_nper, i_nper)
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Número de Periodos: {n_res:.5f}</h3>")
+        themed_info(f"<h3 style='margin:0; color:inherit;'>Número de Periodos (n): {n_res:.5f}</h3>")
         st.latex(r"n = \frac{\ln(C_n/C_0)}{\ln(1+i)}")
 
     separador()
 
     with paso_a_paso():
-        themed_info("**Propiedades de los Logaritmos:**")
         st.latex(r"C_n = C_0(1+i)^n \implies \frac{C_n}{C_0} = (1+i)^n")
         st.latex(r"n = \frac{\ln(C_n/C_0)}{\ln(1+i)}")
+        st.write("---")
 
         ratio = vf_nper / va_nper
         num   = np.log(ratio)
         den   = np.log(1 + i_nper)
 
         st.latex(rf"n = \frac{{\ln({vf_nper:,.2f} / {va_nper:,.2f})}}{{\ln(1 + {i_nper:.4f})}}")
-        st.latex(rf"n = \frac{{\ln({ratio:.6f})}}{{\ln({1+i_nper:.6f})}} = \frac{{{num:.6f}}}{{{den:.6f}}} = {n_res:.5f}")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>n = {n_res:.5f} periodos</h4>")
+        st.latex(rf"n = \frac{{\ln({ratio:.6f})}}{{\ln({1+i_nper:.6f})}}")
+        st.latex(rf"n = \frac{{{num:.6f}}}{{{den:.6f}}}")
+        themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>n = {n_res:.5f} \text{{ periodos}}</h4>")
 
     # Desglose del tiempo exacto
     separador()
-    st.markdown("#### Desglose del tiempo exacto")
+    st.markdown("#### Desglose temporal exacto")
     df_desglose = engine.desglosar_periodos(n_res)
     st.dataframe(
         df_desglose.style.set_properties(**{
@@ -250,9 +268,10 @@ with t3:
 # TAB 4: TASA DE RENDIMIENTO
 # ─────────────────────────────────────────────────────────────────────────────
 with t4:
-    st.markdown(
-        "### Tasa de rendimiento efectivo anual "
-        "(tasa de crecimiento geométrico compuesto)"
+    st.markdown("### Tasa de rendimiento (Tasa Anual de Crecimiento Compuesto)")
+    themed_success(
+        "Calcula la tasa media anual (<span style='font-family: serif; font-style: italic;'>i</span>) a la que "
+        "creció una inversión desde un valor inicial hasta un valor final a lo largo de un plazo determinado."
     )
 
     c1, c2 = st.columns(2)
@@ -270,13 +289,14 @@ with t4:
     separador()
 
     with paso_a_paso():
-        themed_info("**Despejando la tasa mediante raíz n-ésima:**")
         st.latex(r"C_n = C_0(1+i)^n \implies 1+i = \sqrt[n]{\frac{C_n}{C_0}}")
         st.latex(r"i = \left(\frac{C_n}{C_0}\right)^{\frac{1}{n}} - 1")
+        st.write("---")
 
         ratio   = vf_rate / va_rate
         exp_val = 1 / n_rate
 
         st.latex(rf"i = \left(\frac{{{vf_rate:,.2f}}}{{{va_rate:,.2f}}}\right)^{{\frac{{1}}{{{n_rate:g}}}}} - 1")
-        st.latex(rf"i = ({ratio:.6f})^{{{exp_val:.6f}}} - 1 = {ratio**exp_val:.6f} - 1 = {i_res:.6f}")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>i = {i_res*100:.4f}% por periodo</h4>")
+        st.latex(rf"i = ({ratio:.6f})^{{{exp_val:.6f}}} - 1")
+        st.latex(rf"i = {ratio**exp_val:.6f} - 1")
+        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>i = {i_res*100:.4f}\% \text{{ por periodo}}</h4>")

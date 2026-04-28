@@ -1,0 +1,979 @@
+"""
+pages/13_Derivados_Credito.py
+------------------------------
+Módulo 13: Derivados de Crédito.
+Cubre (en orden de complejidad creciente):
+  - Hazard Rate y Probabilidades de Incumplimiento
+  - Valuación de CDS (Credit Default Swap) — Single Name
+  - CDS Binario
+  - Marcar a Mercado un CDS
+  - Valuación de Tranches de CDO (Modelo de Cópula Gaussiana)
+  - Índices de Crédito (CDX / iTraxx)
+
+Basado en el material del Dr. Francisco García Castillo,
+Temas Selectos III — Derivados exóticos en riesgo de crédito, ITESM.
+Modelos de referencia: Hull (2015), Gibson (2004).
+"""
+
+import numpy as np
+import pandas as pd
+import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
+from scipy.stats import norm, binom
+from scipy.optimize import brentq
+
+from utils import (
+    get_engine, page_header, paso_a_paso,
+    separador, themed_info, themed_success,
+    themed_warning, themed_error,
+    apply_plotly_theme, plotly_theme, plotly_colors, plotly_color, get_current_theme,
+    result_call, result_put,
+)
+
+# =============================================================================
+# CONFIGURACIÓN
+# =============================================================================
+st.set_page_config(
+    page_title="Derivados de Crédito · Calculadora Financiera",
+    page_icon="🛡️",
+    layout="wide",
+)
+
+engine = get_engine()
+
+page_header(
+    titulo="13. Derivados de Crédito",
+    subtitulo="Hazard Rate · CDS · CDS Binario · Mark-to-Market · Tranches de CDO · Índices CDX / iTraxx",
+)
+
+# =============================================================================
+# HELPERS LOCALES
+# =============================================================================
+
+def hazard_de_q5(q_5: float) -> float:
+    """Convierte probabilidad acumulada Q(5) a hazard rate constante."""
+    q_adj = max(q_5, 1e-6)
+    return -np.log(1.0 - q_adj) / 5.0
+
+
+def tabla_probabilidades(lam: float, n_anios: int = 5) -> pd.DataFrame:
+    """Genera tabla de PI y Sobrevivencia por año."""
+    filas = []
+    for t in range(1, n_anios + 1):
+        ps_prev = np.exp(-lam * (t - 1))
+        ps_curr = np.exp(-lam * t)
+        pi = ps_prev - ps_curr
+        filas.append({
+            "Tiempo (años)": t,
+            "Probabilidad de Incumplimiento": pi,
+            "Probabilidad de Sobrevivencia": ps_curr,
+        })
+    return pd.DataFrame(filas)
+
+
+def calcular_patas_cds(lam: float, r: float, rr: float, n_anios: int = 5) -> dict:
+    """
+    Calcula las dos patas del CDS y devuelve el spread justo.
+    Supone:
+      - Pagos de prima al final de cada año.
+      - Incumplimiento ocurre a la mitad del año.
+      - Tasa r: capitalización continua.
+    """
+    vpccds = 0.0   # Pata fija: VP pagos de prima
+    vpppcds = 0.0  # VP prima prorrateada
+    vpvcds = 0.0   # Pata contingente
+
+    for t in range(1, n_anios + 1):
+        ps_t = np.exp(-lam * t)
+        ps_prev = np.exp(-lam * (t - 1))
+        pi_t = ps_prev - ps_t          # PI no condicional en el año t
+        t_mid = t - 0.5                # Punto medio del año
+
+        vf_anio = np.exp(-r * t)
+        vf_mid = np.exp(-r * t_mid)
+
+        # Pata fija: pagos anuales (ponderados por sobrevivencia)
+        vpccds += ps_t * vf_anio
+
+        # Prima prorrateada (pago parcial si ocurre default a t-0.5)
+        vpppcds += pi_t * 0.5 * vf_mid
+
+        # Pata contingente: pérdida esperada descontada
+        vpvcds += pi_t * (1.0 - rr) * vf_mid
+
+    spread = vpvcds / (vpccds + vpppcds) if (vpccds + vpppcds) > 0 else 0.0
+
+    return {
+        "VPCCDS": vpccds,
+        "VPPPCDS": vpppcds,
+        "Pata_Fija": vpccds + vpppcds,
+        "VPVCDS": vpvcds,
+        "Spread": spread,
+        "Spread_pb": spread * 10_000,
+    }
+
+
+def mtm_cds(lam: float, r: float, rr: float, spread_orig: float,
+            n_restante: float) -> float:
+    """
+    Marca a mercado un CDS con spread original s₀.
+    Devuelve la ganancia/pérdida por cada USD de nocional.
+    Positivo = ganancia para el vendedor de protección (s₁ > s₀).
+    """
+    res = calcular_patas_cds(lam, r, rr, int(np.ceil(n_restante)))
+    pata_fija = res["Pata_Fija"]
+    spread_nuevo = res["Spread"]
+    return pata_fija * (spread_nuevo - spread_orig)
+
+
+def gaussian_copula_mc(n: int, pi: float, rho: float,
+                       n_sim: int = 20_000, seed: int = 42) -> np.ndarray:
+    """
+    Simulación Monte Carlo del número de defaults usando cópula Gaussiana.
+    Devuelve array de pérdidas (conteo de defaults) por simulación.
+    """
+    rng = np.random.default_rng(seed)
+    Z = rng.standard_normal(n_sim)                  # Factor sistémico
+    eps = rng.standard_normal((n_sim, n))            # Factores idiosincrásicos
+    threshold = norm.ppf(pi)
+
+    X = np.sqrt(rho) * Z[:, None] + np.sqrt(1 - rho) * eps
+    defaults = (X < threshold).sum(axis=1)
+    return defaults
+
+
+# =============================================================================
+# PESTAÑAS
+# =============================================================================
+tabs = st.tabs([
+    "Hazard Rate",
+    "CDS · Spread Justo",
+    "CDS Binario",
+    "Mark-to-Market",
+    "Tranches CDO",
+    "Índices CDX / iTraxx",
+])
+
+tab_hz, tab_cds, tab_bin, tab_mtm, tab_cdo, tab_idx = tabs
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 1 — HAZARD RATE Y PROBABILIDADES
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_hz:
+    st.markdown("### Hazard Rate y Probabilidades de Incumplimiento")
+
+    themed_info(
+        "La <b>hazard rate</b> (λ) es la tasa instantánea de incumplimiento. "
+        "Con λ constante, la probabilidad de sobrevivencia hasta <i>t</i> es "
+        "<b>Q<sub>surv</sub>(t) = e<sup>−λt</sup></b>, y la probabilidad "
+        "no condicional de incumplimiento en el intervalo (t−1, t) es "
+        "<b>PI(t) = e<sup>−λ(t−1)</sup> − e<sup>−λt</sup></b>."
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        modo_entrada = st.radio(
+            "Entrada de λ:", ["Hazard Rate directa", "Q(5) acumulada (5 años)"],
+            horizontal=True, key="hz_modo"
+        )
+        if modo_entrada == "Hazard Rate directa":
+            lam_hz = st.number_input(
+                "Hazard Rate λ (anual)", min_value=1e-6,
+                value=0.0140, step=0.001, format="%.4f", key="hz_lam"
+            )
+        else:
+            q5 = st.number_input(
+                "Q(5) — Prob. acumulada de default a 5 años (%)",
+                min_value=0.01, max_value=99.0, value=0.70,
+                step=0.01, key="hz_q5"
+            ) / 100
+            lam_hz = hazard_de_q5(q5)
+            st.caption(f"λ implícita = **{lam_hz:.6f}** anual")
+
+        n_hz = st.slider("Horizonte (años)", 1, 30, 5, key="hz_n")
+
+    with c2:
+        themed_info(
+            f"**Hazard Rate:** λ = {lam_hz:.6f}<br>"
+            f"**Q<sub>surv</sub>(1 año)** = {np.exp(-lam_hz):.6f}<br>"
+            f"**Q<sub>surv</sub>(5 años)** = {np.exp(-5*lam_hz):.6f}<br>"
+            f"**PI acumulada a 5 años** = {1-np.exp(-5*lam_hz):.6f}"
+        )
+
+    separador()
+    df_prob = tabla_probabilidades(lam_hz, n_hz)
+    st.markdown("#### Tabla de Probabilidades")
+    st.dataframe(
+        df_prob.style.format({
+            "Probabilidad de Incumplimiento": "{:.6f}",
+            "Probabilidad de Sobrevivencia": "{:.6f}",
+        }),
+        use_container_width=True,
+    )
+
+    # Gráfica
+    cc = get_current_theme()
+    cols_plot = plotly_colors()
+    fig_hz = go.Figure()
+    fig_hz.add_trace(go.Bar(
+        x=df_prob["Tiempo (años)"],
+        y=df_prob["Probabilidad de Incumplimiento"],
+        name="PI anual",
+        marker_color=plotly_color(cols_plot[3]),
+    ))
+    fig_hz.add_trace(go.Scatter(
+        x=df_prob["Tiempo (años)"],
+        y=df_prob["Probabilidad de Sobrevivencia"],
+        name="Sobrevivencia",
+        mode="lines+markers",
+        line=dict(color=cols_plot[0], width=2.5),
+        yaxis="y2",
+    ))
+    fig_hz.update_layout(**plotly_theme())
+    fig_hz.update_layout(
+        title="Probabilidades de Incumplimiento y Sobrevivencia",
+        xaxis_title="Tiempo (años)",
+        yaxis_title="PI anual",
+        yaxis2=dict(
+            title="P. Sobrevivencia",
+            overlaying="y", side="right",
+            gridcolor=plotly_color(cc["border"]),
+            tickfont=dict(color=cc["text_muted"]),
+            title_font=dict(color=cc["text_color"]),
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    )
+    st.plotly_chart(fig_hz, use_container_width=True)
+
+    with paso_a_paso("📐 Fórmulas clave"):
+        st.markdown(r"""
+**Hazard rate implícita desde Q(T):**
+
+$$\lambda = \frac{-\ln(1 - Q(T))}{T}$$
+
+**Probabilidad de Sobrevivencia:**
+
+$$Q_{surv}(t) = e^{-\lambda t}$$
+
+**Probabilidad No Condicional de Incumplimiento en el año $t$:**
+
+$$PI(t) = Q_{surv}(t-1) - Q_{surv}(t) = e^{-\lambda(t-1)} - e^{-\lambda t}$$
+""")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 2 — CDS SPREAD JUSTO
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_cds:
+    st.markdown("### Valuación del CDS — Spread Justo")
+
+    themed_info(
+        "Para valuar un CDS se igualan la <b>Pata Fija</b> (pagos de prima del comprador) "
+        "y la <b>Pata Contingente</b> (pago del vendedor al ocurrir el default). "
+        "El spread justo <b>s*</b> es aquel que hace que el valor inicial del contrato sea cero:<br><br>"
+        "$$s^* = \\dfrac{\\text{VPVCDS}}{\\text{VPCCDS} + \\text{VPPPCDS}}$$"
+    )
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("**Parámetros del CDS**")
+        modo_lam_cds = st.radio(
+            "λ desde:", ["Hazard Rate directa", "Q(5) acumulada"],
+            horizontal=True, key="cds_modo"
+        )
+        if modo_lam_cds == "Hazard Rate directa":
+            lam_cds = st.number_input(
+                "Hazard Rate λ (anual)", min_value=1e-6,
+                value=0.0140, step=0.001, format="%.4f", key="cds_lam"
+            )
+        else:
+            q5_cds = st.number_input(
+                "Q(5) (%)", min_value=0.01, max_value=99.0,
+                value=0.70, step=0.01, key="cds_q5"
+            ) / 100
+            lam_cds = hazard_de_q5(q5_cds)
+            st.caption(f"λ = {lam_cds:.6f}")
+
+        n_cds = st.slider("Vencimiento (años)", 1, 10, 5, key="cds_n")
+
+    with c2:
+        st.markdown("**Tasas y Mercado**")
+        r_cds = st.number_input(
+            "Tasa libre de riesgo r (%)", value=5.0,
+            step=0.1, key="cds_r"
+        ) / 100
+        rr_cds = st.number_input(
+            "Recovery Rate RR (%)", min_value=0.0, max_value=100.0,
+            value=40.0, step=1.0, key="cds_rr"
+        ) / 100
+        nocional_cds = st.number_input(
+            "Nocional principal ($M)", min_value=0.1,
+            value=100.0, step=10.0, key="cds_noc"
+        ) * 1_000_000
+
+    with c3:
+        st.markdown("**Resumen**")
+        res = calcular_patas_cds(lam_cds, r_cds, rr_cds, n_cds)
+        themed_success(
+            f"**VPCCDS** (Pata Fija anual): {res['VPCCDS']:.6f}<br>"
+            f"**VPPPCDS** (Prima prorrateada): {res['VPPPCDS']:.6f}<br>"
+            f"**Pata Fija Total**: {res['Pata_Fija']:.6f}<br>"
+            f"**VPVCDS** (Pata Contingente): {res['VPVCDS']:.6f}<br>"
+            f"**Spread Justo s***: {res['Spread_pb']:.4f} pb<br>"
+            f"**Prima anual** (${nocional_cds:,.0f}): "
+            f"${res['Spread'] * nocional_cds:,.2f}"
+        )
+
+    separador()
+
+    # Tabla detallada de las patas
+    st.markdown("#### Tabla: Pata Fija (Pagos del Comprador)")
+    filas_fija = []
+    for t in range(1, n_cds + 1):
+        ps_t = np.exp(-lam_cds * t)
+        pi_t = np.exp(-lam_cds * (t - 1)) - ps_t
+        t_mid = t - 0.5
+        vf_a = np.exp(-r_cds * t)
+        vf_m = np.exp(-r_cds * t_mid)
+        pago_e = ps_t
+        vpago = pago_e * vf_a
+        pp_e = pi_t * 0.5
+        vppp = pp_e * vf_m
+        filas_fija.append({
+            "t (años)": t,
+            "P. Sobrevivencia": ps_t,
+            "Pago Esperado (×s)": pago_e,
+            "Factor VP": vf_a,
+            "VP Pago Esperado (×s)": vpago,
+            "PI (mid)": pi_t,
+            "PP Esperado (×s)": pp_e,
+            "Factor VP (mid)": vf_m,
+            "VP PP Esperado (×s)": vppp,
+        })
+    df_fija = pd.DataFrame(filas_fija)
+    st.dataframe(df_fija.style.format("{:.6f}", subset=[c for c in df_fija.columns if c != "t (años)"]),
+                 use_container_width=True)
+
+    st.markdown("#### Tabla: Pata Contingente (Pagos del Vendedor)")
+    filas_cont = []
+    for t in range(1, n_cds + 1):
+        pi_t = np.exp(-lam_cds * (t - 1)) - np.exp(-lam_cds * t)
+        t_mid = t - 0.5
+        vf_m = np.exp(-r_cds * t_mid)
+        lgd = 1.0 - rr_cds
+        pe = pi_t * lgd
+        vpe = pe * vf_m
+        filas_cont.append({
+            "t_mid (años)": t_mid,
+            "PI": pi_t,
+            "Recovery Rate": rr_cds,
+            "LGD (1−RR)": lgd,
+            "Pérdida Esperada": pe,
+            "Factor VP": vf_m,
+            "VP Pérdida Esperada": vpe,
+        })
+    df_cont = pd.DataFrame(filas_cont)
+    st.dataframe(df_cont.style.format("{:.6f}", subset=[c for c in df_cont.columns if c != "t_mid (años)"]),
+                 use_container_width=True)
+
+    # Flujos del CDS (diagrama de flujos tipo simulación)
+    separador()
+    st.markdown("#### Gráfica: Flujos del CDS (s* ya calculado)")
+    cols_p = plotly_colors()
+    fig_cds = go.Figure()
+    xs = list(range(1, n_cds + 1))
+    pagos_prima = [np.exp(-lam_cds * t) * res["Spread"] for t in xs]
+    pagos_cont = [
+        -(np.exp(-lam_cds * (t - 1)) - np.exp(-lam_cds * t)) * (1 - rr_cds)
+        for t in xs
+    ]
+    fig_cds.add_trace(go.Bar(x=xs, y=pagos_prima, name="Prima (comprador → vendedor)",
+                              marker_color=plotly_color(cols_p[2])))
+    fig_cds.add_trace(go.Bar(x=xs, y=pagos_cont, name="Pérdida Esperada (vendedor → comprador)",
+                              marker_color=plotly_color(cols_p[5])))
+    fig_cds.update_layout(**plotly_theme())
+    fig_cds.update_layout(
+        barmode="group",
+        title="Flujos Esperados del CDS (por $1 de nocional)",
+        xaxis_title="Año",
+        yaxis_title="Flujo esperado ($)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    )
+    st.plotly_chart(fig_cds, use_container_width=True)
+
+    with paso_a_paso("📐 Fórmulas del CDS"):
+        st.markdown(r"""
+**Pata Fija — VP pagos de prima anuales:**
+
+$$\text{VPCCDS} = s \cdot \sum_{i=1}^{n} Q_{surv}(t_i) \cdot e^{-r \cdot t_i}$$
+
+**VP Prima Prorrateada (default a mitad del año):**
+
+$$\text{VPPPCDS} = s \cdot \sum_{i=1}^{n} PI(t_i^*) \cdot 0.5 \cdot e^{-r \cdot t_i^*}$$
+
+donde $t_i^* = 0.5, 1.5, 2.5, \ldots$
+
+**Pata Contingente — VP pago esperado del vendedor:**
+
+$$\text{VPVCDS} = \sum_{i=1}^{n} PI(t_i^*) \cdot (1 - RR) \cdot e^{-r \cdot t_i^*}$$
+
+**Spread justo s* (se despeja igualando las patas):**
+
+$$s^* = \frac{\text{VPVCDS}}{\text{VPCCDS} + \text{VPPPCDS}}$$
+
+En puntos base: $s^* \times 10{,}000$ pb.
+
+**Sensibilidad al Recovery Rate:** a mayor RR, menor spread (el vendedor paga menos).
+""")
+
+    # Análisis de sensibilidad RR
+    separador()
+    st.markdown("#### Sensibilidad: Spread vs Recovery Rate")
+    rr_arr = np.linspace(0, 0.9, 50)
+    spreads_arr = [calcular_patas_cds(lam_cds, r_cds, rr, n_cds)["Spread_pb"] for rr in rr_arr]
+
+    def _hex_to_rgba(hex_str: str, alpha: float = 0.12) -> str:
+        """Convierte un color hex (6 u 8 dígitos) a una cadena rgba() que Plotly acepta."""
+        h = plotly_color(hex_str).lstrip("#")
+        if len(h) == 6:
+            r_v, g_v, b_v = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        else:
+            r_v, g_v, b_v = 100, 150, 200  # fallback seguro
+        return f"rgba({r_v},{g_v},{b_v},{alpha})"
+
+    fig_rr = go.Figure(go.Scatter(
+        x=rr_arr * 100, y=spreads_arr,
+        mode="lines", line=dict(color=plotly_color(cols_p[0]), width=2.5),
+        fill="tozeroy", fillcolor=_hex_to_rgba(cols_p[0], 0.12),
+    ))
+    fig_rr.add_vline(x=rr_cds * 100, line_dash="dash", line_color=plotly_color(cols_p[3]),
+                      annotation_text=f"RR = {rr_cds*100:.0f}%")
+    fig_rr.update_layout(**plotly_theme())
+    fig_rr.update_layout(
+        title="Spread del CDS vs Recovery Rate",
+        xaxis_title="Recovery Rate (%)",
+        yaxis_title="Spread (pb)",
+    )
+    st.plotly_chart(fig_rr, use_container_width=True)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 3 — CDS BINARIO
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_bin:
+    st.markdown("### CDS Binario")
+
+    themed_info(
+        "Un <b>CDS Binario</b> es idéntico al CDS ordinario, excepto que el pago al ocurrir "
+        "el default es una cantidad <b>fija</b> (generalmente el valor par, es decir 100% del nocional), "
+        "independientemente del valor de recuperación. <br><br>"
+        "La pata fija no cambia; solo cambia la pata contingente:<br>"
+        "$$\\text{VPVCDS}_{bin} = \\sum_{i=1}^{n} PI(t_i^*) \\cdot 1 \\cdot e^{-r \\cdot t_i^*}$$<br>"
+        "Y la relación aproximada entre ambos spreads es: "
+        "$s_{bin} \\approx s_{CDS} / (1 - RR)$"
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        modo_lam_bin = st.radio(
+            "λ desde:", ["Hazard Rate directa", "Q(5) acumulada"],
+            horizontal=True, key="bin_modo"
+        )
+        if modo_lam_bin == "Hazard Rate directa":
+            lam_bin = st.number_input(
+                "Hazard Rate λ (anual)", min_value=1e-6,
+                value=0.0140, step=0.001, format="%.4f", key="bin_lam"
+            )
+        else:
+            q5_bin = st.number_input(
+                "Q(5) (%)", min_value=0.01, max_value=99.0,
+                value=0.70, step=0.01, key="bin_q5"
+            ) / 100
+            lam_bin = hazard_de_q5(q5_bin)
+            st.caption(f"λ = {lam_bin:.6f}")
+
+        r_bin = st.number_input("Tasa libre de riesgo r (%)", value=5.0, step=0.1, key="bin_r") / 100
+        rr_bin = st.number_input(
+            "Recovery Rate RR (%)", min_value=0.0, max_value=100.0,
+            value=40.0, step=1.0, key="bin_rr"
+        ) / 100
+        n_bin = st.slider("Vencimiento (años)", 1, 10, 5, key="bin_n")
+
+    with c2:
+        res_ord = calcular_patas_cds(lam_bin, r_bin, rr_bin, n_bin)
+
+        # CDS binario: igual pata fija, pero contingente sin ajuste por RR
+        vpvcds_bin = 0.0
+        for t in range(1, n_bin + 1):
+            pi_t = np.exp(-lam_bin * (t - 1)) - np.exp(-lam_bin * t)
+            t_mid = t - 0.5
+            vpvcds_bin += pi_t * 1.0 * np.exp(-r_bin * t_mid)
+
+        spread_bin = vpvcds_bin / res_ord["Pata_Fija"] if res_ord["Pata_Fija"] > 0 else 0.0
+        ratio_aprox = res_ord["Spread"] / (1 - rr_bin) if (1 - rr_bin) > 0 else 0
+
+        themed_success(
+            f"**CDS Ordinario:**<br>"
+            f"— Spread s*: {res_ord['Spread_pb']:.4f} pb<br><br>"
+            f"**CDS Binario:**<br>"
+            f"— VPVCDS<sub>bin</sub>: {vpvcds_bin:.6f}<br>"
+            f"— Spread<sub>bin</sub>: {spread_bin*10000:.4f} pb<br><br>"
+            f"**Relación aproximada s<sub>bin</sub> ≈ s / (1−RR):**<br>"
+            f"— s / (1−RR) = {ratio_aprox*10000:.4f} pb<br>"
+            f"— Error relativo: {abs(spread_bin - ratio_aprox)/max(ratio_aprox, 1e-10)*100:.2f}%"
+        )
+
+    separador()
+
+    # Tabla comparativa
+    st.markdown("#### Comparativa de spreads por calificación crediticia")
+    tabla_cred = [
+        ("AAA", 0.721, 0.0203, 7.29),
+        ("AA+", 0.696, 0.0111, 3.64),
+        ("AA",  0.671, 0.0278, 8.46),
+        ("AA-", 0.646, 0.0230, 6.70),
+        ("A+",  0.621, 0.0321, 8.46),
+        ("A",   0.596, 0.0442, 10.94),
+        ("A-",  0.542, 0.0554, 12.12),
+        ("BBB+",0.516, 0.0906, 18.73),
+        ("BBB", 0.370, 17.19,  27.29),
+        ("BBB-",0.345, 35.20,  53.75),
+        ("BB+", 0.334, 45.49,  68.30),
+        ("BB",  None,  79.17,  114.59),
+        ("BB-", None,  127.50, 186.14),
+        ("B+",  0.281, 194.96, 271.15),
+        ("B",   0.247, 238.18, 316.32),
+        ("B-",  0.198, 377.78, 471.05),
+        ("CCC/C",None, 785.63, 979.59),
+    ]
+    df_cred = pd.DataFrame(tabla_cred, columns=[
+        "Calificación", "Recovery Rate", "Spread CDS (pb)", "Spread CDS Binario (pb)"
+    ])
+    st.dataframe(df_cred, use_container_width=True)
+
+    with paso_a_paso("📐 Diferencia CDS Ordinario vs Binario"):
+        st.markdown(r"""
+| Característica | CDS Ordinario | CDS Binario |
+|---|---|---|
+| **Pago al default** | Nocional × (1 − RR) | Nocional (100% fijo) |
+| **Pata fija** | Idéntica | Idéntica |
+| **Pata contingente** | $\sum PI(t^*) \cdot (1{-}RR) \cdot e^{-rt^*}$ | $\sum PI(t^*) \cdot 1 \cdot e^{-rt^*}$ |
+| **Spread** | $s_{CDS}$ | $s_{bin} \approx s_{CDS}/(1-RR)$ |
+
+**Intuición:** como el CDS binario siempre paga 100% (y no el LGD), su spread es mayor.
+""")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 4 — MARK-TO-MARKET
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_mtm:
+    st.markdown("### Marcar a Mercado un CDS Existente")
+
+    themed_info(
+        "Una vez emitido, el CDS tiene valor de mercado variable. "
+        "Si el spread de mercado sube, el <b>vendedor de protección</b> gana "
+        "(pues el CDS que vendió barato vale más). "
+        "La ganancia/pérdida por cada $1 de nocional es:<br><br>"
+        "$$\\text{MtM} = (\\text{VPCCDS} + \\text{VPPPCDS}) \\cdot (s_1 - s_0)$$"
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**Condiciones originales del CDS**")
+        modo_lam_mtm = st.radio(
+            "λ actual desde:", ["Hazard Rate directa", "Q(5) acumulada"],
+            horizontal=True, key="mtm_modo"
+        )
+        if modo_lam_mtm == "Hazard Rate directa":
+            lam_mtm = st.number_input(
+                "Hazard Rate λ actual (anual)", min_value=1e-6,
+                value=0.0140, step=0.001, format="%.4f", key="mtm_lam"
+            )
+        else:
+            q5_mtm = st.number_input(
+                "Q(5) actual (%)", min_value=0.01, max_value=99.0,
+                value=0.70, step=0.01, key="mtm_q5"
+            ) / 100
+            lam_mtm = hazard_de_q5(q5_mtm)
+            st.caption(f"λ actual = {lam_mtm:.6f}")
+
+        r_mtm = st.number_input("Tasa libre de riesgo r (%)", value=5.0, step=0.1, key="mtm_r") / 100
+        rr_mtm = st.number_input(
+            "Recovery Rate RR (%)", min_value=0.0, max_value=100.0,
+            value=40.0, step=1.0, key="mtm_rr"
+        ) / 100
+        n_mtm = st.slider("Tiempo restante (años)", 1, 10, 4, key="mtm_n")
+
+    with c2:
+        st.markdown("**Spread original del contrato**")
+        s0_pb = st.number_input(
+            "Spread original s₀ (pb)", min_value=0.0, value=10.0, step=0.5, key="mtm_s0"
+        )
+        s0 = s0_pb / 10_000
+        nocional_mtm = st.number_input(
+            "Nocional ($M)", min_value=0.1, value=100.0, step=10.0, key="mtm_noc"
+        ) * 1_000_000
+        posicion = st.radio(
+            "Posición propia:", ["Vendedor de protección", "Comprador de protección"],
+            key="mtm_pos"
+        )
+
+    res_mtm = calcular_patas_cds(lam_mtm, r_mtm, rr_mtm, n_mtm)
+    s1 = res_mtm["Spread"]
+    pata_fija_mtm = res_mtm["Pata_Fija"]
+    mtm_unit = pata_fija_mtm * (s1 - s0)
+    mtm_total = mtm_unit * nocional_mtm
+    if posicion == "Comprador de protección":
+        mtm_total = -mtm_total
+
+    separador()
+    ca, cb, cc_col = st.columns(3)
+    ca.metric("Spread actual s₁ (pb)", f"{s1*10000:.4f}")
+    cb.metric("Spread original s₀ (pb)", f"{s0_pb:.4f}")
+    cc_col.metric("Diferencia s₁ − s₀ (pb)", f"{(s1-s0)*10000:.4f}")
+
+    if mtm_total >= 0:
+        themed_success(f"**Ganancia MtM:** ${mtm_total:,.2f} USD (para el {posicion})")
+    else:
+        themed_error(f"**Pérdida MtM:** ${abs(mtm_total):,.2f} USD (para el {posicion})")
+
+    # Perfil MtM vs s1
+    separador()
+    st.markdown("#### Perfil de MtM vs Spread de Mercado")
+    s1_arr = np.linspace(0, s1 * 3 + 0.001, 200)
+    mtm_arr = [pata_fija_mtm * (s - s0) * nocional_mtm for s in s1_arr]
+    if posicion == "Comprador de protección":
+        mtm_arr = [-v for v in mtm_arr]
+
+    cols_p = plotly_colors()
+    fig_mtm = go.Figure()
+    fig_mtm.add_trace(go.Scatter(
+        x=[s * 10000 for s in s1_arr], y=mtm_arr,
+        mode="lines", line=dict(color=plotly_color(cols_p[0]), width=2.5),
+        fill="tozeroy", fillcolor=f"rgba(0,180,100,0.1)",
+        name="Ganancia / Pérdida",
+    ))
+    fig_mtm.add_vline(x=s0_pb, line_dash="dash", line_color=plotly_color(cols_p[3]),
+                       annotation_text=f"s₀ = {s0_pb:.1f} pb")
+    fig_mtm.add_vline(x=s1 * 10000, line_dash="dot", line_color=plotly_color(cols_p[1]),
+                       annotation_text=f"s₁ actual = {s1*10000:.2f} pb")
+    fig_mtm.add_hline(y=0, line_color=plotly_color(cols_p[5]), line_width=1.5)
+    fig_mtm.update_layout(**plotly_theme())
+    fig_mtm.update_layout(
+        title="Mark-to-Market del CDS vs Spread de Mercado",
+        xaxis_title="Spread de Mercado s₁ (pb)",
+        yaxis_title="MtM ($)",
+    )
+    st.plotly_chart(fig_mtm, use_container_width=True)
+
+    with paso_a_paso("📐 Fórmulas MtM"):
+        st.markdown(r"""
+**Ganancia/Pérdida del vendedor de protección:**
+
+$$\text{MtM} = (\text{VPCCDS} + \text{VPPPCDS}) \cdot (s_1 - s_0) \times \text{Nocional}$$
+
+- Si $s_1 > s_0$: **el vendedor gana** (vendió la protección más barata de lo que vale ahora).
+- Si $s_1 < s_0$: **el comprador gana** (compró protección más cara de lo que vale ahora).
+- Para el comprador de protección, el signo se invierte.
+
+**Liquidación por cash settlement al ocurrir el default:**
+
+$$\text{Pago} = \text{Nocional} \times (1 - RR)$$
+""")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 5 — TRANCHES CDO (CÓPULA GAUSSIANA)
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_cdo:
+    st.markdown("### Valuación de Tranches de CDO — Cópula Gaussiana")
+
+    themed_info(
+        "El <b>Modelo de Cópula Gaussiana</b> introduce correlación entre los momentos "
+        "de incumplimiento de las empresas mediante un factor sistémico común Z. "
+        "Cada empresa i incumple si su 'score' cae por debajo del umbral de la distribución normal:<br><br>"
+        "$$X_i = \\sqrt{\\rho}\\, Z + \\sqrt{1{-}\\rho}\\, \\varepsilon_i < \\Phi^{-1}(Q_i)$$<br>"
+        "La distribución de pérdidas del portafolio determina qué porcentaje absorbe cada tranche."
+    )
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        n_emp = st.slider("Número de empresas (n)", 5, 200, 125, step=5, key="cdo_n")
+        pi_emp = st.number_input(
+            "PI individual (%)", min_value=0.01, max_value=30.0,
+            value=1.21, step=0.1, key="cdo_pi"
+        ) / 100
+        rho_cdo = st.slider(
+            "Correlación ρ", min_value=0.0, max_value=0.99,
+            value=0.30, step=0.01, key="cdo_rho"
+        )
+
+    with c2:
+        lgd_cdo = st.number_input(
+            "LGD por empresa (%)", min_value=1.0, max_value=100.0,
+            value=60.0, step=1.0, key="cdo_lgd"
+        ) / 100
+        noc_emp = st.number_input(
+            "Nocional por empresa ($M)", min_value=0.1,
+            value=8.0, step=1.0, key="cdo_noc"
+        )
+        n_sim = st.select_slider(
+            "Simulaciones MC", options=[5_000, 10_000, 25_000, 50_000],
+            value=10_000, key="cdo_sim"
+        )
+
+    with c3:
+        st.markdown("**Puntos de Adjunción del CDO**")
+        a1 = st.number_input("Attach 1 (%)", min_value=0.0, max_value=99.0, value=0.0, step=0.5, key="a1") / 100
+        d1 = st.number_input("Detach 1 / Attach 2 (%)", min_value=0.0, max_value=99.0, value=3.0, step=0.5, key="d1") / 100
+        d2 = st.number_input("Detach 2 / Attach 3 (%)", min_value=0.0, max_value=99.0, value=7.0, step=0.5, key="d2") / 100
+        d3 = st.number_input("Detach 3 / Attach 4 (%)", min_value=0.0, max_value=99.0, value=10.0, step=0.5, key="d3") / 100
+        d4 = st.number_input("Detach 4 (%)", min_value=0.0, max_value=100.0, value=100.0, step=1.0, key="d4") / 100
+
+    if st.button("▶ Ejecutar Simulación de Cópula Gaussiana", key="cdo_run"):
+        with st.spinner("Simulando distribución de pérdidas..."):
+            defaults_sim = gaussian_copula_mc(n_emp, pi_emp, rho_cdo, n_sim)
+
+        portafolio_total = n_emp * noc_emp
+        perdidas_pct = defaults_sim * lgd_cdo / n_emp  # Pérdida como % del portafolio
+
+        # Pérdidas por tranche
+        def perdida_tranche(L_pct, A, D):
+            return np.minimum(np.maximum(L_pct - A, 0), D - A)
+
+        tranches = [
+            (f"Equity ({a1*100:.0f}%−{d1*100:.0f}%)", a1, d1),
+            (f"Mezzanine ({d1*100:.0f}%−{d2*100:.0f}%)", d1, d2),
+            (f"Senior ({d2*100:.0f}%−{d3*100:.0f}%)", d2, d3),
+            (f"Super Senior ({d3*100:.0f}%−{d4*100:.0f}%)", d3, d4),
+        ]
+
+        resultados = []
+        for nombre, A, D in tranches:
+            L_t = perdida_tranche(perdidas_pct, A, D)
+            resultados.append({
+                "Tranche": nombre,
+                "Attachment": f"{A*100:.1f}%",
+                "Detachment": f"{D*100:.1f}%",
+                "Pérdida Esperada (%)": f"{L_t.mean()*100:.4f}%",
+                "Pérdida Máxima (95%)": f"{np.percentile(L_t, 95)*100:.4f}%",
+                "P(Pérdida > 0)": f"{(L_t > 0).mean()*100:.2f}%",
+                "P(Pérdida = Máximo)": f"{(L_t >= D - A - 1e-9).mean()*100:.2f}%",
+            })
+
+        df_res = pd.DataFrame(resultados)
+        separador()
+        st.markdown("#### Resultados por Tranche")
+        st.dataframe(df_res, use_container_width=True)
+
+        # Distribución de pérdidas
+        cols_p = plotly_colors()
+        fig_dist = go.Figure()
+        bins_arr = np.linspace(0, perdidas_pct.max() + 0.001, 80)
+        counts, edges = np.histogram(perdidas_pct, bins=bins_arr, density=False)
+        midpoints = (edges[:-1] + edges[1:]) / 2
+
+        fig_dist.add_trace(go.Bar(
+            x=midpoints * 100, y=counts / n_sim * 100,
+            name="Distribución de Pérdidas",
+            marker_color=plotly_color(cols_p[0]),
+        ))
+        for _, A, D in tranches:
+            fig_dist.add_vrect(
+                x0=A * 100, x1=D * 100,
+                opacity=0.15, fillcolor=plotly_color(cols_p[tranches.index((_, A, D)) % len(cols_p)]),
+                annotation_text=_.split(" ")[0], annotation_position="top left",
+            )
+        fig_dist.update_layout(**plotly_theme())
+        fig_dist.update_layout(
+            title=f"Distribución de Pérdidas del Portafolio (ρ = {rho_cdo:.2f})",
+            xaxis_title="Pérdida del portafolio (%)",
+            yaxis_title="Frecuencia (%)",
+        )
+        st.plotly_chart(fig_dist, use_container_width=True)
+
+        # Comparativa ρ = 0 vs ρ = actual vs ρ = 1
+        separador()
+        st.markdown("#### Efecto de la Correlación en el Equity Tranche")
+        rho_vals = [0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+        pe_equity = []
+        for rho_v in rho_vals:
+            d_sim = gaussian_copula_mc(n_emp, pi_emp, rho_v, 10_000, seed=7)
+            lp = d_sim * lgd_cdo / n_emp
+            lt = perdida_tranche(lp, a1, d1)
+            pe_equity.append(lt.mean() * 100)
+
+        fig_rho = go.Figure(go.Scatter(
+            x=rho_vals, y=pe_equity,
+            mode="lines+markers", line=dict(color=plotly_color(cols_p[0]), width=2.5),
+            marker=dict(size=8),
+        ))
+        fig_rho.add_vline(x=rho_cdo, line_dash="dash", line_color=plotly_color(cols_p[3]),
+                           annotation_text=f"ρ = {rho_cdo:.2f}")
+        fig_rho.update_layout(**plotly_theme())
+        fig_rho.update_layout(
+            title="Pérdida Esperada del Equity Tranche vs Correlación",
+            xaxis_title="Correlación ρ",
+            yaxis_title="Pérdida Esperada (%)",
+        )
+        st.plotly_chart(fig_rho, use_container_width=True)
+
+    else:
+        themed_warning("Ajusta los parámetros y presiona **Ejecutar Simulación** para ver los resultados.")
+
+    with paso_a_paso("📐 Cópula Gaussiana — Fórmulas"):
+        st.markdown(r"""
+**Score de la empresa i:**
+
+$$X_i = \sqrt{\rho}\, Z + \sqrt{1-\rho}\, \varepsilon_i$$
+
+donde $Z, \varepsilon_i \sim \mathcal{N}(0,1)$ independientes y $Z$ es el factor sistémico común.
+
+**Indicador de default:**
+
+$$\mathbb{1}[\text{default}_i] = \mathbb{1}\!\left[X_i < \Phi^{-1}(Q_i)\right]$$
+
+**Pérdida total del portafolio (como % del nocional):**
+
+$$L_{total} = \frac{1}{n} \sum_{i=1}^{n} \mathbb{1}[\text{default}_i] \cdot LGD$$
+
+**Pérdida del tranche [A, D]:**
+
+$$L_{tranche} = \min(L_{total}, D) - \min(L_{total}, A)$$
+
+**Efecto de la correlación:**
+- $\rho \to 0$: pérdidas muy concentradas en la media → equity tranche caro, senior barato.
+- $\rho \to 1$: distribución bimodal (todos incumplen o ninguno) → senior se encarece.
+""")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 6 — ÍNDICES CDX / iTraxx
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_idx:
+    st.markdown("### Índices de Crédito: CDX NA IG / iTraxx Europe")
+
+    themed_info(
+        "Los índices de CDS son portafolios estandarizados de <b>125 CDS</b> sobre empresas de "
+        "grado de inversión. Permiten cubrir o especular sobre el crédito de un mercado completo "
+        "con <b>una sola transacción</b>.<br><br>"
+        "Los tranches estandarizados del <b>iTraxx Europe</b> son: "
+        "0-3%, 3-6%, 6-9%, 9-12%, 12-22%, 22-100%."
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**Parámetros del Índice**")
+        n_idx = st.number_input(
+            "Empresas en el índice", min_value=10, max_value=200,
+            value=125, step=1, key="idx_n"
+        )
+        spread_idx_pb = st.number_input(
+            "Spread del índice (pb)", min_value=0.1,
+            value=80.0, step=1.0, key="idx_s"
+        )
+        nocional_idx = st.number_input(
+            "Nocional total ($M)", min_value=1.0,
+            value=660.0, step=10.0, key="idx_noc"
+        )
+
+    with c2:
+        st.markdown("**Evento Crédito: Reducción del Índice**")
+        n_defaults = st.number_input(
+            "Número de empresas en default", min_value=0,
+            max_value=int(n_idx), value=1, step=1, key="idx_def"
+        )
+        rr_idx = st.number_input(
+            "Recovery Rate (%)", min_value=0.0, max_value=100.0,
+            value=40.0, step=1.0, key="idx_rr"
+        ) / 100
+
+    noc_por_empresa = nocional_idx / n_idx
+    reduccion_prima = noc_por_empresa * n_defaults
+    nocional_nuevo = nocional_idx - noc_por_empresa * n_defaults
+    pago_default = noc_por_empresa * n_defaults * (1 - rr_idx)
+
+    separador()
+    ca, cb, cc_col, cd = st.columns(4)
+    ca.metric("Nocional original ($M)", f"${nocional_idx:,.2f}M")
+    cb.metric("Reducción de prima ($M)", f"${reduccion_prima:,.2f}M")
+    cc_col.metric("Nocional post-default ($M)", f"${nocional_nuevo:,.2f}M")
+    cd.metric("Pago por defaults ($M)", f"${pago_default:,.2f}M")
+
+    # Cotizaciones históricas de referencia iTraxx (del material)
+    st.markdown("#### Cotizaciones históricas: iTraxx Europe a 5 años (pb)")
+    df_itx = pd.DataFrame({
+        "Fecha": ["Ene 2007", "Ene 2008", "Ene 2009"],
+        "0-3% (% + 500)": [10.34, 30.98, 64.28],
+        "3-6%":  [41.59,  316.90, 1185.63],
+        "6-9%":  [11.95,  212.40,  606.69],
+        "9-12%": [5.60,   140.00,  315.63],
+        "12-22%":[2.00,   73.60,    97.13],
+        "22-100%":[23,    77,        165],
+        "Spread Índice": [23, 77, 165],
+    })
+    st.dataframe(df_itx, use_container_width=True)
+
+    themed_info(
+        "⚠️ El tranche <b>0-3% (equity)</b> cotiza como <b>porcentaje del nocional + 500 pb</b>, "
+        "no como spread puro. Notar el dramático incremento en 2008-2009 durante la crisis financiera: "
+        "el tranche senior pasó de 23 pb a 165 pb, y el equity de 10.34% a 64.28%."
+    )
+
+    # Gráfica de la evolución
+    cols_p = plotly_colors()
+    fechas = ["Ene 2007", "Ene 2008", "Ene 2009"]
+    tranches_itx = {
+        "3-6%":   [41.59,  316.90, 1185.63],
+        "6-9%":   [11.95,  212.40,  606.69],
+        "9-12%":  [5.60,   140.00,  315.63],
+        "12-22%": [2.00,    73.60,   97.13],
+        "22-100%":[23,       77,      165],
+    }
+    fig_idx = go.Figure()
+    for i, (nombre, vals) in enumerate(tranches_itx.items()):
+        fig_idx.add_trace(go.Scatter(
+            x=fechas, y=vals,
+            mode="lines+markers",
+            name=nombre,
+            line=dict(color=cols_p[i % len(cols_p)], width=2),
+            marker=dict(size=8),
+        ))
+    fig_idx.update_layout(**plotly_theme())
+    fig_idx.update_layout(
+        title="Evolución de Spreads de Tranches iTraxx Europe 5Y",
+        xaxis_title="Fecha",
+        yaxis_title="Spread (pb)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    )
+    st.plotly_chart(fig_idx, use_container_width=True)
+
+    with paso_a_paso("📐 Mecánica de los Índices CDX / iTraxx"):
+        st.markdown(r"""
+**Spread del índice** es el spread igual-ponderado de los CDS de las 125 empresas componentes.
+
+**Reducción de prima al ocurrir un default:**
+
+$$\Delta \text{Prima anual} = \frac{\text{Nocional Total}}{n} = \frac{660\text{M}}{125} = 5.28\text{M USD}$$
+
+**Pago al ocurrir default de $k$ empresas:**
+
+$$\text{Pago} = k \cdot \frac{\text{Nocional}}{n} \cdot (1 - RR)$$
+
+**Posiciones:**
+- **Largo (vender protección):** apuesta a que las empresas NO incumplen.
+- **Corto (comprar protección):** cobertura ante defaults en el portafolio.
+
+**Tranches estandarizados del iTraxx Europe:**
+
+| Tranche | Attachment | Detachment | Riesgo |
+|---|---|---|---|
+| Equity | 0% | 3% | Primeras pérdidas |
+| Mezzanine | 3% | 6% | Pérdidas intermedias |
+| Senior | 6% | 9% | Pérdidas elevadas |
+| Super Senior | 9% | 22% | Pérdidas muy altas |
+| Ultra Senior | 22% | 100% | Pérdidas sistémicas |
+""")

@@ -41,10 +41,9 @@ tab_gordon, tab_rendimiento, tab_multiplos = st.tabs([
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_gordon:
     st.markdown("### Modelo de Crecimiento Constante de Dividendos")
-    themed_info(
-        "Supone que los dividendos crecen a una tasa constante <span style='font-family: serif; font-style: italic;'>g</span> a perpetuidad. "
-        "El modelo sólo es válido cuando el rendimiento requerido <span style='font-family: serif; font-style: italic;'>k</span> es **mayor** "
-        "que la tasa de crecimiento <span style='font-family: serif; font-style: italic;'>g</span>."
+    themed_success(
+        "El **Modelo de Gordon-Shapiro** calcula el precio justo de una acción asumiendo que sus dividendos crecerán a un ritmo constante "
+        "(<span style='font-family: serif; font-style: italic;'>g</span>) para siempre. Es muy útil para valuar empresas maduras y estables que pagan dividendos regularmente. <br><br>"
     )
 
     c1, c2 = st.columns(2)
@@ -65,9 +64,9 @@ with tab_gordon:
 
     with c2:
         if k_gs <= g_gs:
-            themed_warning(
+            themed_error(
                 "El modelo **no converge** cuando <span style='font-family: serif; font-style: italic;'>k ≤ g</span>. "
-                "La tasa de rendimiento debe superar a la de crecimiento."
+                "La tasa de rendimiento debe superar obligatoriamente a la de crecimiento."
             )
         else:
             precio_gs = engine.valuacion_gordon_shapiro(d1_gs, k_gs, g_gs)
@@ -80,12 +79,11 @@ with tab_gordon:
                 st.latex(r"P_0 = \frac{D_1}{k - g}")
                 st.latex(rf"P_0 = \frac{{{d1_gs:,.2f}}}{{{k_gs:.4f} - {g_gs:.4f}}}")
                 st.latex(rf"P_0 = \frac{{{d1_gs:,.2f}}}{{{k_gs - g_gs:.4f}}}")
-                st.latex(rf"P_0 = {precio_gs:,.4f}")
                 themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>P_0 = ${precio_gs:,.4f}</h4>")
 
             # ── Interpretación automática ──────────────────────────────────
             separador()
-            st.markdown("#### Interpretación")
+            st.markdown("#### Desglose de Retornos")
             col_i1, col_i2, col_i3 = st.columns(3)
             col_i1.metric("Dividendo Yield ($D_1/P_0$)", f"{(d1_gs / precio_gs)*100:.2f}%")
             col_i2.metric("Tasa de crecimiento ($g$)", f"{g_gs*100:.2f}%")
@@ -103,9 +101,9 @@ with tab_gordon:
 with tab_rendimiento:
     st.markdown("### Cálculo del Rendimiento Requerido ($k$)")
     themed_info(
-        "Despeje del modelo de Gordon: dado el precio de mercado actual <span style='font-family: serif; font-style: italic;'>P<sub>0</sub></span>, "
-        "el dividendo esperado <span style='font-family: serif; font-style: italic;'>D<sub>1</sub></span> y la tasa de crecimiento <span style='font-family: serif; font-style: italic;'>g</span>, "
-        "calcula cuánto rendimiento exige implícitamente el mercado."
+        "El **Rendimiento Requerido (<span style='font-family: serif; font-style: italic;'>k</span>)** te dice qué porcentaje de ganancia anual "
+        "está esperando el mercado de esta acción, basándose en su precio actual y sus dividendos. <br><br>"
+        "Esta métrica es clave para saber si la inversión cumple con tus expectativas personales de ganancia frente al riesgo que estás tomando."
     )
 
     c1, c2 = st.columns(2)
@@ -136,8 +134,7 @@ with tab_rendimiento:
             st.latex(r"k = \frac{D_1}{P_0} + g")
             st.latex(rf"k = \frac{{{d1_rr:,.2f}}}{{{p0_rr:,.2f}}} + {g_rr:.4f}")
             st.latex(rf"k = {div_yield:.6f} + {g_rr:.4f}")
-            st.latex(rf"k = {k_calc:.6f}")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>k = {k_calc*100:.4f}%</h4>")
+            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>k = {k_calc*100:.4f}\%</h4>")
 
         separador()
 
@@ -146,24 +143,25 @@ with tab_rendimiento:
         col_d1, col_d2 = st.columns(2)
         col_d1.metric("Componente Dividendo ($D_1/P_0$)",
                       f"{(d1_rr/p0_rr)*100:.2f}%",
-                      help="Rendimiento por cobro de dividendos")
+                      help="Rendimiento por cobro de dividendos directamente en efectivo.")
         col_d2.metric("Componente Crecimiento ($g$)",
                       f"{g_rr*100:.2f}%",
-                      help="Rendimiento por apreciación esperada del precio")
+                      help="Rendimiento por la apreciación esperada del precio de la acción.")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 3 — MÚLTIPLOS
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_multiplos:
     st.markdown("### Valuación Relativa por Múltiplos de Mercado")
-    themed_info(
-        "Estima el valor de una acción o empresa comparándola con el múltiplo "
-        "promedio de empresas similares en el mercado."
+    themed_success(
+        "La **Valuación por Múltiplos** es una forma rápida de estimar cuánto debería valer una empresa comparándola con otras similares. <br><br>"
+        "Por ejemplo, si sabes que en promedio las empresas de tu sector se venden a 15 veces sus ganancias, "
+        "puedes usar esa misma regla matemática para calcular el precio justo de la acción que estás analizando."
     )
 
     # Configuración del múltiplo
     metodo = st.selectbox(
-        "Selecciona el múltiplo de valuación:",
+        "Selecciona el múltiplo a utilizar para la comparación:",
         [
             "Precio / Utilidad (P/E Ratio)",
             "Precio / Ventas (P/S Ratio)",
@@ -251,12 +249,11 @@ with tab_multiplos:
         with paso_a_paso():
             st.latex(cfg["formula"])
             st.latex(rf"{cfg['var_nombre']} = {val_metrica:,.2f} \times {val_multiplo:,.2f}")
-            st.latex(rf"{cfg['var_nombre']} = {resultado_mul:,.4f}")
             themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>{cfg['var_nombre']} = ${resultado_mul:,.4f}</h4>")
 
     # ── Tabla comparativa de múltiplos ────────────────────────────────────────
     separador()
-    with st.expander("📚 Referencia: Rangos típicos de múltiplos por sector"):
+    with st.expander("Referencia: Rangos típicos de múltiplos por sector"):
         st.markdown("""
 | Sector            | P/E típico | P/S típico | EV/EBITDA típico | P/B típico |
 | :---------------- | :--------: | :--------: | :--------------: | :--------: |
@@ -267,5 +264,5 @@ with tab_multiplos:
 | Salud             | 20 – 35x   | 3 – 8x     | 12 – 20x         | 3 – 7x     |
 | Industrial        | 15 – 25x   | 1 – 3x     | 8 – 14x          | 2 – 4x     |
 
->  *Estos rangos son orientativos. Siempre compara contra el promedio específico del sector y del ciclo económico actual.*
+>  *Estos rangos son orientativos y cambian constantemente. Siempre es necesario comparar contra el promedio específico del sector al momento de evaluar.*
         """)

@@ -1,7 +1,7 @@
 """
-pages/8_Riesgo.py
+pages/9_Riesgo.py
 -----------------
-Módulo 8: Análisis de Riesgo.
+Módulo 9: Análisis de Riesgo.
 Tab 1: Riesgo de Portafolios de Acciones — VaR / CVaR paramétrico y Monte Carlo.
 Tab 2: CreditMetrics — Riesgo de crédito en portafolios de bonos corporativos.
 """
@@ -37,7 +37,7 @@ from credit_engine import (
     TRADING_DAYS,
 )
 from utils import (
-    get_engine, page_header, separador,
+    get_engine, page_header, paso_a_paso, separador,
     themed_info, themed_success, themed_warning, themed_error,
     plotly_theme, plotly_colors, get_current_theme,
 )
@@ -54,7 +54,7 @@ st.set_page_config(
 engine = get_engine()
 
 page_header(
-    titulo="8. Análisis de Riesgo",
+    titulo="9. Análisis de Riesgo",
     subtitulo="Portafolios de Acciones (VaR/CVaR) · CreditMetrics para Bonos Corporativos"
 )
 
@@ -67,11 +67,23 @@ tab_port, tab_cm = st.tabs([
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — RIESGO DE PORTAFOLIOS (original)
+# TAB 1 — RIESGO DE PORTAFOLIOS (ACCIONES)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_port:
+    st.markdown("### Análisis de Valor en Riesgo (VaR) de Acciones")
+    themed_info(
+        "El **Valor en Riesgo (VaR)** estima la pérdida máxima que un portafolio podría sufrir en un horizonte "
+        "de tiempo (<span style='font-family: serif; font-style: italic;'>t</span>) con un nivel de confianza "
+        "(<span style='font-family: serif; font-style: italic;'>1 − &alpha;</span>). <br><br>"
+        "Calculamos el riesgo mediante el método paramétrico (asumiendo distribución normal) y mediante Simulación Monte Carlo "
+        "(evaluando miles de escenarios históricos posibles para capturar caídas extremas)."
+    )
 
     with st.expander("Seleccionar Activos y Periodo", expanded=True):
+        st.markdown(
+            "Selecciona **en qué empresas invertir** y **cuánto historial** se utilizará "
+            "para estimar su volatilidad y rendimiento pasado."
+        )
         c1, c2 = st.columns([2, 1])
         with c1:
             tickers_str = st.text_input(
@@ -89,7 +101,7 @@ with tab_port:
     separador()
 
     st.markdown("#### Asignar Ponderaciones Manuales")
-    st.caption("Haz clic en las celdas de la columna **Peso (%)** para ajustar el porcentaje.")
+    st.caption("Haz clic en las celdas de la columna **Peso (%)** para ajustar qué porcentaje de tu capital va a cada acción.")
 
     if len(tickers_list) > 0:
         peso_eq = round(100.0 / len(tickers_list), 4)
@@ -110,7 +122,7 @@ with tab_port:
         if abs(suma_pesos - 100.0) > 0.1:
             themed_warning(
                 f"Tus porcentajes suman **{suma_pesos:.1f}%**. "
-                "El modelo los ajustará proporcionalmente al 100%."
+                "El modelo los ajustará matemáticamente para que sumen el 100% exacto."
             )
     else:
         themed_error("Ingresa al menos un ticker válido.")
@@ -118,6 +130,10 @@ with tab_port:
 
     separador()
     st.markdown("#### Configurar Escenario de Riesgo")
+    st.markdown(
+        "Define tu **inversión total**, qué tan conservador quieres ser en tu estimación (nivel de confianza) "
+        "y a cuántos días hacia el futuro deseas proyectar la pérdida potencial."
+    )
 
     col_r1, col_r2, col_r3 = st.columns(3)
     with col_r1:
@@ -158,11 +174,11 @@ with tab_port:
                     "riesgo_horizonte": horizonte_str, "riesgo_dias": dias_h,
                     "riesgo_hoy": hoy,
                 })
-                themed_success("Análisis completado.")
+                themed_success("Simulación de riesgo completada.")
             except Exception as e:
-                themed_error(f"Error en el cálculo: {e}")
+                themed_error(f"Error en el cálculo o descarga de datos: {e}")
 
-    if "riesgo_rend" in st.session_state:
+    if "riesgo_rend" in st.session_state and "riesgo_cols" in st.session_state:
         rend_p       = st.session_state["riesgo_rend"]
         vol_p        = st.session_state["riesgo_vol"]
         pesos_reales = st.session_state["riesgo_pesos"]
@@ -179,7 +195,7 @@ with tab_port:
         c_m1.metric("Rendimiento Esperado Anual", f"{rend_p*100:.2f}%")
         c_m2.metric("Volatilidad Anual (σ)",       f"{vol_p*100:.2f}%")
         sharpe_ref = (rend_p - 0.05) / vol_p if vol_p > 0 else 0.0
-        c_m3.metric("Ratio de Sharpe", f"{sharpe_ref:.4f}", help="Tasa libre de riesgo: 5% anual")
+        c_m3.metric("Ratio de Sharpe", f"{sharpe_ref:.4f}", help="Tasa libre de riesgo asumiendo 5% anual")
         separador()
 
         var_p,  _, _, _ = engine.calcular_var_parametrico(rend_p, vol_p, capital, conf, dias)
@@ -187,9 +203,27 @@ with tab_port:
 
         st.markdown(f"### VaR — Horizonte: **{h_str}** | Confianza: **{conf*100:.0f}%**")
         col_res1, col_res2, col_res3 = st.columns(3)
-        col_res1.metric("VaR Paramétrico",            f"${var_p:,.2f}")
-        col_res2.metric("VaR Monte Carlo",             f"${var_mc:,.2f}")
-        col_res3.metric("CVaR (Expected Shortfall)",   f"${cvar_mc:,.2f}")
+        
+        with col_res1:
+            themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR Paramétrico: ${var_p:,.2f}</h4>")
+        with col_res2:
+            themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR Monte Carlo: ${var_mc:,.2f}</h4>")
+        with col_res3:
+            themed_error(f"<h4 style='margin:0; color:inherit;'>CVaR (Shortfall): ${cvar_mc:,.2f}</h4>")
+
+        with paso_a_paso():
+            st.latex(r"VaR_{param} = V_0 \times \left(Z_{\alpha} \times \sigma_{anual} \times \sqrt{\frac{t}{252}} - \mu_{anual} \times \frac{t}{252}\right)")
+            z_score = norm.ppf(conf)
+            t_frac = dias / 252
+            st.latex(rf"VaR_{{param}} = {capital:,.2f} \left({z_score:.4f} \times {vol_p:.4f} \times \sqrt{{{t_frac:.4f}}} - {rend_p:.4f} \times {t_frac:.4f}\right)")
+            factor_vol = z_score * vol_p * np.sqrt(t_frac)
+            factor_ret = rend_p * t_frac
+            st.latex(rf"VaR_{{param}} = {capital:,.2f} ({factor_vol:.6f} - {factor_ret:.6f}) = {var_p:,.2f}")
+            st.write("---")
+            st.latex(r"CVaR_{MC} = \mathbb{E}[L \mid L > VaR]")
+            st.latex(rf"CVaR_{{MC}} = {cvar_mc:,.2f}")
+
+        separador()
 
         tab_comp_p, tab_hist_p, tab_dl_p = st.tabs([
             "Composición Efectiva", "Precios Históricos", "Exportar Datos"
@@ -203,12 +237,12 @@ with tab_port:
         with tab_hist_p:
             precios_norm = (data / data.iloc[0]) * 100
             fig_hist = px.line(precios_norm, x=precios_norm.index, y=precios_norm.columns,
-                               labels={"value": "Valor ($)", "Date": "Fecha"})
+                               labels={"value": "Valor normalizado ($)", "Date": "Fecha"})
             fig_hist.update_layout(hovermode="x unified", **plotly_theme())
             st.plotly_chart(fig_hist, use_container_width=True)
         with tab_dl_p:
             st.download_button(
-                "Precios Históricos (.csv)",
+                "⬇️ Descargar Precios Históricos (.csv)",
                 data=data.to_csv().encode("utf-8"),
                 file_name=f"precios_{hoy_g}.csv", mime="text/csv",
                 use_container_width=True,
@@ -222,10 +256,10 @@ with tab_cm:
     st.markdown("### CreditMetrics — Riesgo de Crédito en Portafolios de Bonos")
     themed_info(
         "**CreditMetrics** (J.P. Morgan, 1997) cuantifica el riesgo de crédito de un portafolio "
-        "de bonos corporativos mediante la distribución completa de valores posibles del portafolio, "
-        "derivada de la **matriz de transición** de calificaciones crediticias. "
-        "Soporta **1 a 10 bonos**, caso **independiente** (analítico exacto) y **correlacionado** "
-        "(Cópula Gaussiana via Monte Carlo)."
+        "de bonos corporativos estimando todos sus valores posibles al final del año, "
+        "basándose en la **matriz de transición** de calificaciones de S&P.<br><br>"
+        "Soporta de **1 a 10 bonos**, evaluando el riesgo tanto de forma **independiente** (analítico exacto) "
+        "como **correlacionado** (Cópula Gaussiana vía Monte Carlo)."
     )
     separador()
 
@@ -252,8 +286,8 @@ with tab_cm:
         )
     with col_opt2:
         _mode_info = {
-            "raw_with_d":   "Probabilidades S&P crudas (AAA..D). NR se excluye.",
-            "redistribute": "Filas suman 1.0. NR redistribuido proporcionalmente.",
+            "raw_with_d":   "Probabilidades S&P crudas originales. NR se excluye del sistema.",
+            "redistribute": "Filas se normalizan a 1.0. NR redistribuido matemáticamente y de manera proporcional.",
         }
         themed_info(_mode_info[nr_mode])
 
@@ -282,11 +316,10 @@ with tab_cm:
     with st1:
         st.markdown("#### Configurar bonos del portafolio (1 a 10 bonos)")
         themed_info(
-            "Ingresa los parámetros de cada bono: nombre, calificación actual (S&P), "
-            "valor nominal, cupón anual, vencimiento, pagos por año y tasa de recuperación "
-            "esperada en caso de default."
+            "Ingresa los parámetros financieros y contractuales de cada bono emitido. "
+            "El sistema utilizará estos datos para revaluar el bono si la empresa cambia de calificación."
         )
-        n_bonds = st.number_input("Número de bonos:", min_value=1, max_value=10,
+        n_bonds = st.number_input("Número de bonos en el portafolio:", min_value=1, max_value=10,
                                    value=2, step=1, key="cm_n")
         _defs = [
             {"n":"Nvidia",  "r":"AA-", "vn":100., "c":5.0,  "t":5, "p":1, "rec":43.18},
@@ -306,8 +339,8 @@ with tab_cm:
             st.markdown(f"##### Bono {i+1}")
             co1, co2, co3, co4 = st.columns(4)
             with co1:
-                nom = st.text_input("Nombre", value=d["n"], key=f"cm_nom_{i}")
-                rat = st.selectbox("Calificación", RATINGS[:-1],
+                nom = st.text_input("Nombre de Emisora", value=d["n"], key=f"cm_nom_{i}")
+                rat = st.selectbox("Calificación S&P Actual", RATINGS[:-1],
                                    index=RATINGS.index(d["r"]) if d["r"] in RATINGS else 0,
                                    key=f"cm_r_{i}")
             with co2:
@@ -324,23 +357,22 @@ with tab_cm:
                                                            4:"Trimestral",12:"Mensual"}[x])
             with co4:
                 rc = st.number_input("Recuperación D (%)", min_value=0., max_value=100.,
-                                      value=d["rec"], step=1., key=f"cm_rc_{i}") / 100
+                                      value=d["rec"], step=1., key=f"cm_rc_{i}",
+                                      help="Porcentaje que se recupera si el bono cae en Default (D).") / 100
             bond_params.append({
                 "nombre": nom, "rating": rat, "rating_idx": RATING_IDX[rat],
                 "VN": vn, "cupon_pct": cp, "T": int(T), "pagos": pg, "recov": rc,
             })
             if i < int(n_bonds) - 1: st.markdown("---")
         st.session_state["cm_bparams"] = bond_params
-        themed_success(f"**{int(n_bonds)} bono(s)** configurados.")
+        themed_success(f"**{int(n_bonds)} bono(s)** cargados en la memoria del modelo.")
 
     # ── ST2: MATRIZ DE TRANSICIÓN ─────────────────────────────────────────────
     with st2:
-        st.markdown("#### Matriz de Transición de Calificaciones S&P (editable)")
+        st.markdown("#### Matriz de Transición de Calificaciones S&P")
         themed_info(
-            "Probabilidades de migración de calificación en 1 año. "
-            "Fuente: S&P Global, 1981–2021. Las **filas** son la calificación actual "
-            "y las **columnas** la calificación destino. "
-            "El modelo normaliza cada fila para sumar exactamente 1.0."
+            "Muestra las **probabilidades históricas** de migración de calificación en un año (S&P Global, 1981–2021). "
+            "Las filas son la calificación actual del emisor y las columnas la calificación destino."
         )
 
         if "cm_tm_raw" not in st.session_state:
@@ -353,7 +385,7 @@ with tab_cm:
 
         col_tm1, col_tm2 = st.columns([4, 1])
         with col_tm2:
-            if st.button("Restaurar S&P", key="cm_rst_tm"):
+            if st.button("Restaurar S&P Original", key="cm_rst_tm"):
                 from credit_engine import _TM_RAW_17x19
                 _raw = _TM_RAW_17x19.copy()
                 _d = np.zeros((1,19)); _d[0,17] = 1.0
@@ -366,7 +398,7 @@ with tab_cm:
                 "Suma": [f"{s:.4f}" for s in row_sums],
                 "": ["✓" if abs(s-1)<0.002 else "⚠" for s in row_sums]
             })
-            st.caption("Verificación de filas:")
+            st.caption("Verificación de filas (suman 1):")
             st.dataframe(df_sums, hide_index=True, use_container_width=True, height=460)
 
         with col_tm1:
@@ -386,9 +418,6 @@ with tab_cm:
             )
             raw_arr = ed.values.astype(float)
             st.session_state["cm_tm_raw"] = raw_arr
-            # CORRECCIÓN: respetar el modo activo al reconstruir la matriz de trabajo.
-            # Sin esto, visitar este tab reemplazaba cm_tm con una 18×18 aunque
-            # el modo fuera raw_no_d_nr (17×17), causando IndexError en la convolución.
             _active_mode = st.session_state.get("cm_nr_mode", "redistribute")
             st.session_state["cm_tm"] = build_transition_matrix(raw_arr[:17], _active_mode)
 
@@ -409,57 +438,48 @@ with tab_cm:
         )
         st.plotly_chart(fig_hm, use_container_width=True)
 
+        with paso_a_paso():
+            if nr_mode == "raw_no_d_nr":
+                st.latex(r"\text{Suma de fila no controlada (sin normalizar)}")
+            else:
+                st.latex(r"P_{i,j}^{adj} = \frac{P_{i,j}}{\sum_{k=1}^{N} P_{i,k}}")
+                st.latex(rf"\sum P_{{AAA}} = {np.sum(_tm_plot[0]):.6f}")
+
     # ── HELPERS: curva de tasas automática ───────────────────────────────────
-    # Spreads planos por defecto = diferencia entre all-in año-1 y tesoro año-1
-    _DEFAULT_SPREADS_FLAT = DEFAULT_SPREADS[:17, 0] - DEFAULT_TREASURY[0]  # (17,)
+    _DEFAULT_SPREADS_FLAT = DEFAULT_SPREADS[:17, 0] - DEFAULT_TREASURY[0]
 
     def _default_tsy_anchors(max_t: int) -> np.ndarray:
-        """Treasury en años enteros 1..max_t. Usa DEFAULT_TREASURY hasta donde alcance."""
         v = np.full(max_t, DEFAULT_TREASURY[-1])
         v[:min(max_t, len(DEFAULT_TREASURY))] = DEFAULT_TREASURY[:min(max_t, len(DEFAULT_TREASURY))]
         return v
 
     def _build_allin_table(max_t: int) -> tuple:
-        """
-        Genera la tabla all-in (17, n_tenors) y el vector de tenores.
-
-        - Tenores: cada 0.5 años desde 0.5 hasta max_t (cubre pagos anuales y semestrales).
-          Para frecuencias mayores (trimestral, mensual) la función de descuento
-          usa el tenor más cercano disponible, que con 0.5 de paso es suficientemente preciso.
-        - Interpolación lineal con origen en (0, 0):
-            all_in(r, t) = interp([0,1,...,max_t], [0, tsy1+spr, tsy2+spr, ...], t)
-          Esto replica exactamente la convención del Excel (columna 0.5 = año1/2).
-        """
         tsy  = st.session_state.get("cm_tsy_anchors", _default_tsy_anchors(max_t))
         spr  = st.session_state.get("cm_spreads_flat", _DEFAULT_SPREADS_FLAT.copy())
-        # Asegurar longitud correcta
         if len(tsy) < max_t:
             tsy = np.append(tsy, np.full(max_t - len(tsy), tsy[-1]))
-        tenors = np.arange(0.5, max_t + 0.01, 0.5)           # [0.5, 1.0, ..., max_t]
-        anchor_x = np.array([0] + list(range(1, max_t + 1)))  # [0, 1, 2, ..., max_t]
+        tenors = np.arange(0.5, max_t + 0.01, 0.5)
+        anchor_x = np.array([0] + list(range(1, max_t + 1)))
         allin = np.zeros((17, len(tenors)))
         for r_idx in range(17):
             anchor_y = np.array([0.0] + [tsy[y] + spr[r_idx] for y in range(max_t)])
             allin[r_idx] = np.interp(tenors, anchor_x, anchor_y)
-        # Row 17 = D (placeholder NaN, handled by bond_values_per_rating)
-        full = np.vstack([allin, np.full((1, len(tenors)), np.nan)])  # (18, n_tenors)
+        full = np.vstack([allin, np.full((1, len(tenors)), np.nan)])
         return full, tenors
 
     # ── ST3: CURVA DE TASAS ───────────────────────────────────────────────────
     with st3:
-        st.markdown("#### Curva de Tasas")
+        st.markdown("#### Curvas de Rendimiento (Treasury + Spread)")
         themed_info(
-            "Ingresa la **tasa libre de riesgo** (tesoro) para cada año de vencimiento "
-            "y el **spread** por calificación crediticia. "
-            "El motor genera automáticamente las tasas para todos los tenores intermedios "
-            "por interpolación lineal — no tienes que llenar ninguna tabla extra."
+            "Ingresa la **tasa libre de riesgo** (Treasury) y el **spread crediticio** por calificación. "
+            "El sistema calculará automáticamente la tasa 'All-In' que se usará para descontar los flujos futuros de los bonos "
+            "en cada escenario posible."
         )
 
         _bond_ps = st.session_state.get("cm_bparams", [])
         _max_T   = min(max((b["T"] for b in _bond_ps), default=5), 10)
         _n_spr_rows = min(17, _N_STATES)
 
-        # Inicializar o ajustar longitud de tesoro si max_T cambió
         if "cm_tsy_anchors" not in st.session_state:
             st.session_state["cm_tsy_anchors"] = _default_tsy_anchors(_max_T)
         else:
@@ -474,10 +494,8 @@ with tab_cm:
 
         col3a, col3b = st.columns([1, 2])
 
-        # ── Columna izquierda: tesoro ────────────────────────────────────────
         with col3a:
-            st.markdown("##### Tasa libre de riesgo (tesoro)")
-            st.caption("Un valor por año de vencimiento.")
+            st.markdown("##### Tasa libre de riesgo (rf)")
             df_tsy = pd.DataFrame({
                 "Año": list(range(1, _max_T + 1)),
                 "Tasa (%)": (st.session_state["cm_tsy_anchors"] * 100).round(4),
@@ -492,15 +510,13 @@ with tab_cm:
             )
             st.session_state["cm_tsy_anchors"] = ed_tsy["Tasa (%)"].values / 100
 
-            if st.button("Restaurar tasas US por defecto", key="cm_rst_rates"):
+            if st.button("Restaurar tasas de mercado", key="cm_rst_rates"):
                 st.session_state.pop("cm_tsy_anchors", None)
                 st.session_state.pop("cm_spreads_flat", None)
                 st.rerun()
 
-        # ── Columna derecha: spread por rating ───────────────────────────────
         with col3b:
-            st.markdown("##### Spread crediticio por calificación")
-            st.caption("Un solo valor por rating — se aplica igual a todos los plazos.")
+            st.markdown("##### Spread crediticio")
             df_spr = pd.DataFrame({
                 "Rating":     RATINGS[:_n_spr_rows],
                 "Spread (%)": (st.session_state["cm_spreads_flat"][:_n_spr_rows] * 100).round(4),
@@ -518,16 +534,11 @@ with tab_cm:
             new_spr[:_n_spr_rows] = ed_spr["Spread (%)"].values / 100
             st.session_state["cm_spreads_flat"] = new_spr
 
-        # ── Vista previa: tabla all-in generada automáticamente ───────────────
         separador()
         allin_preview, tenors_preview = _build_allin_table(_max_T)
         tenor_labels = [f"t={t:.1f}" for t in tenors_preview]
 
-        with st.expander("Ver tabla all-in generada (tesoro + spread)", expanded=False):
-            st.caption(
-                "Tasa all-in = Tesoro(t) + Spread(rating). "
-                "Interpolación lineal con origen en cero — replica la convención del Excel."
-            )
+        with st.expander("Ver tabla All-In generada (Tasa rf + Spread)", expanded=False):
             df_preview = pd.DataFrame(
                 allin_preview[:_n_spr_rows] * 100,
                 index=RATINGS[:_n_spr_rows],
@@ -544,7 +555,6 @@ with tab_cm:
                 },
             )
 
-        # ── Gráfica de curvas ─────────────────────────────────────────────────
         c_th = get_current_theme()
         fig_yc = go.Figure()
         tsy_line = np.interp(
@@ -564,7 +574,7 @@ with tab_cm:
                     name=r_name, mode="lines", opacity=0.8,
                 ))
         fig_yc.update_layout(
-            title="Curvas de rendimiento all-in por calificación",
+            title="Curvas de rendimiento All-In por calificación",
             xaxis_title="Plazo (años)", yaxis_title="Tasa all-in (%)",
             height=400, **plotly_theme(),
         )
@@ -590,14 +600,7 @@ with tab_cm:
             out.append({**bp, "values": vals})
         return out
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # HELPER: tabla de métricas completa (1y · 1d · 10d · Capital)
-    # ─────────────────────────────────────────────────────────────────────────
     def _build_metrics_table(scaled: dict, conf_levels, conf_labels, ev: float) -> pd.DataFrame:
-        """
-        Construye el DataFrame con todas las métricas a mostrar.
-        scaled: resultado de scale_var_cvar()
-        """
         rows = []
         for cf, lb in zip(conf_levels, conf_labels):
             r = scaled[cf]
@@ -616,18 +619,14 @@ with tab_cm:
 
     # ── ST4: CASO INDEPENDIENTE ───────────────────────────────────────────────
     with st4:
-        st.markdown("#### CreditMetrics — Caso Independiente (convolución exacta)")
+        st.markdown("#### Cálculo VaR: Caso Independiente")
         themed_info(
-            "Bajo el supuesto de **independencia**, la distribución del portafolio "
-            "se calcula por **convolución exacta** de las distribuciones individuales: "
-            "el resultado es la distribución **completa y exacta** de todos los valores posibles "
-            "del portafolio con sus probabilidades. No es simulación — es cálculo analítico.\n\n"
-            f"Los VaR/CVaR anuales se escalan a **1 día** y **10 días** usando la raíz cuadrada "
-            f"del tiempo (√T), con {TRADING_DAYS} días de trading anuales. "
-            "El **capital regulatorio** es **3 × VaR 10 días** (Basilea II/III)."
+            "Bajo el supuesto de independencia, calculamos todos los escenarios futuros posibles usando la "
+            "**convolución exacta**. Esto genera la distribución probabilística perfecta de tu portafolio si "
+            "el impago de una empresa no contagiara a las demás."
         )
 
-        if st.button("Calcular distribución independiente", use_container_width=True, key="btn_ind"):
+        if st.button("Calcular distribución analítica", use_container_width=True, key="btn_ind"):
             with st.spinner("Calculando convolución..."):
                 bd = _get_bond_data()
                 if not bd:
@@ -635,7 +634,6 @@ with tab_cm:
                 else:
                     tm      = st.session_state.get("cm_tm", DEFAULT_TM)
                     mode_now = st.session_state.get("cm_nr_mode", "redistribute")
-                    # raw_with_d usa probabilidades crudas (no normalizadas) — replica Excel
                     do_normalize = (mode_now != "raw_with_d")
 
                     sdist  = independent_distribution(bd, tm)
@@ -643,7 +641,6 @@ with tab_cm:
                                                         normalize=do_normalize)
                     scaled = scale_var_cvar(vr, CONF_LEVELS)
 
-                    # ── VaR Paramétrico (replica Excel paso 5) ─────────────
                     ev_ex    = vr[CONF_LEVELS[0]]["EV"]
                     sigma_ex = vr[CONF_LEVELS[0]]["sigma"]
                     vr_p     = var_cvar_parametric(ev_ex, sigma_ex, CONF_LEVELS)
@@ -658,44 +655,47 @@ with tab_cm:
                         "cm_ibonds":       bd,
                         "cm_ev":           vr[0.99]["EV"],
                     })
-                    themed_success(f"Distribución calculada: **{len(sdist):,}** escenarios distintos.")
+                    themed_success(f"La máquina probó matemáticamente **{len(sdist):,}** escenarios distintos.")
 
         if "cm_ivars_param" in st.session_state:
             bd_i  = st.session_state["cm_ibonds"]
             sdist = st.session_state["cm_sdist"]
-            vr    = st.session_state["cm_ivars"]        # solo para E[V], σ y gráfica
+            vr    = st.session_state["cm_ivars"]
             sc_p  = st.session_state["cm_iscaled_param"]
             ev    = vr[CONF_LEVELS[0]]["EV"]
             sigma = vr[CONF_LEVELS[0]]["sigma"]
             c_th  = get_current_theme()
 
             col_ev1, col_ev2 = st.columns(2)
-            col_ev1.metric("E[V] portafolio", f"${ev:,.4f}")
-            col_ev2.metric("σ portafolio",    f"${sigma:,.4f}")
+            col_ev1.metric("Valor Esperado (E[V])", f"${ev:,.4f}")
+            col_ev2.metric("Volatilidad (σ)",    f"${sigma:,.4f}")
             separador()
 
-            # ── Métricas de riesgo ───────────────────────────────────────────
-            st.markdown("##### Métricas de Riesgo — 1 año · 1 día · 10 días · Capital")
+            st.markdown("##### Requerimientos Regulatorios y Extremos de Riesgo")
             themed_info(
-                f"VaR = Φ⁻¹(α) × σ  ·  "
-                f"CVaR = φ(Φ⁻¹(α)) / (1−α) × σ  ·  "
-                f"VaR_1d = VaR_1y ÷ √{TRADING_DAYS}  ·  "
-                f"VaR_10d = VaR_1d × √10  ·  Capital = 3 × VaR_10d"
+                f"La regulación bancaria actual solicita escalar el VaR anual a ventanas más cortas usando "
+                f"la raíz cuadrada del tiempo (<span style='font-family: serif; font-style: italic;'>&radic;t</span>). "
+                f"El requerimiento de Capital dictado por Basilea asume un colchón de 3 veces el VaR a 10 días."
             )
             df_metrics_p = _build_metrics_table(sc_p, CONF_LEVELS, CONF_LABELS, ev)
             st.dataframe(df_metrics_p, hide_index=True, use_container_width=True)
 
             r99p = sc_p[0.99]
             col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-            col_p1.metric("VaR 1 día (99%)",   f"${r99p['VaR_1d']:,.2f}")
-            col_p2.metric("CVaR 1 día (99%)",  f"${r99p['CVaR_1d']:,.2f}")
-            col_p3.metric("VaR 10 días (99%)", f"${r99p['VaR_10d']:,.2f}")
-            col_p4.metric("Capital requerido", f"${r99p['Capital']:,.2f}",
-                          help="3 × VaR 10 días — multiplicador Basilea II/III")
+            with col_p1: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 1d (99%):<br>${r99p['VaR_1d']:,.2f}</h4>")
+            with col_p2: themed_warning(f"<h4 style='margin:0; color:inherit;'>CVaR 1d (99%):<br>${r99p['CVaR_1d']:,.2f}</h4>")
+            with col_p3: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 10d (99%):<br>${r99p['VaR_10d']:,.2f}</h4>")
+            with col_p4: themed_error(f"<h4 style='margin:0; color:inherit;'>Capital Basilea:<br>${r99p['Capital']:,.2f}</h4>")
+
+            with paso_a_paso():
+                st.latex(r"E[V]_{port} = \sum_{i=1}^n \sum_{j=1}^{K} p_{i,j} \times V_{i,j}")
+                st.latex(r"VaR_{1d} = \frac{VaR_{1y}}{\sqrt{252}}")
+                st.latex(r"VaR_{10d} = VaR_{1d} \times \sqrt{10}")
+                st.latex(r"Capital = 3 \times VaR_{10d}")
+
             separador()
 
-            # ── Distribuciones individuales por bono ────────────────────────
-            st.markdown("##### Distribución individual de cada bono")
+            st.markdown("##### Distribución individual por bono")
             tm4 = st.session_state.get("cm_tm", DEFAULT_TM)
             tabs_bonds = st.tabs([b["nombre"] for b in bd_i])
             for tab_b, b in zip(tabs_bonds, bd_i):
@@ -737,8 +737,7 @@ with tab_cm:
 
             separador()
 
-            # ── Distribución del portafolio (convolución) ───────────────────
-            st.markdown("##### Distribución del portafolio (convolución)")
+            st.markdown("##### Probabilidad Combinada (Portafolio Total)")
             vr_p  = st.session_state["cm_ivars_param"]
             vals_a  = np.array([d[0] for d in sdist])
             probs_a = np.array([d[1] for d in sdist]); probs_a /= probs_a.sum()
@@ -769,7 +768,6 @@ with tab_cm:
             )
             st.plotly_chart(fig_d, use_container_width=True)
 
-            # ── Tabla completa de distribución ──────────────────────────────
             st.markdown("##### Tabla de distribución completa")
             df_fd = pd.DataFrame({
                 "Valor ($)":           vals_a,
@@ -802,14 +800,11 @@ with tab_cm:
 
     # ── ST5: CASO CORRELACIONADO ──────────────────────────────────────────────
     with st5:
-        st.markdown("#### CreditMetrics — Caso Correlacionado (Cópula Gaussiana)")
+        st.markdown("#### Cálculo VaR: Caso Correlacionado (Cópula Gaussiana)")
         themed_info(
-            "Simulación Monte Carlo con **Cópula Gaussiana**: se simulan variables normales "
-            "correlacionadas, se mapean a ratings usando los umbrales N⁻¹(P acumulada) de la "
-            "matriz de transición, y se calcula el valor del portafolio. "
-            "La **proxy de correlación** son los rendimientos accionarios (aᵢ = corr. con factor F).\n\n"
-            f"Los VaR/CVaR anuales se escalan a **1 día** y **10 días** usando √T "
-            f"({TRADING_DAYS} días/año). **Capital = 3 × VaR 10 días**."
+            "En las crisis globales, todas las empresas caen juntas. La **Cópula Gaussiana** es una herramienta que conecta las "
+            "probabilidades individuales de los bonos simulando su correlación en la bolsa de valores. Si una empresa se degrada, "
+            "aumenta la probabilidad de que la otra también lo haga."
         )
 
         bd_c = _get_bond_data()
@@ -817,8 +812,8 @@ with tab_cm:
 
         col5a, col5b = st.columns([2, 1])
         with col5a:
-            st.markdown("##### Matriz de correlación entre bonos")
-            st.caption("Proxy: correlación de rendimientos accionarios. Diagonal = 1.0 (fijo).")
+            st.markdown("##### Matriz de correlación entre empresas")
+            st.caption("Usa la relación que tienen sus acciones en la bolsa como 'proxy' de correlación.")
             if ("cm_corrm" not in st.session_state or
                     st.session_state["cm_corrm"].shape[0] != n_bc):
                 st.session_state["cm_corrm"] = np.eye(n_bc)
@@ -837,11 +832,11 @@ with tab_cm:
 
         with col5b:
             n_sims5 = st.select_slider(
-                "Simulaciones:", options=[10_000,50_000,100_000,200_000],
+                "Muestras Monte Carlo:", options=[10_000,50_000,100_000,200_000],
                 value=50_000, key="cm_sims5",
             )
 
-            st.markdown("##### Umbrales N⁻¹ por bono")
+            st.markdown("##### Umbrales Límite")
             tm5 = st.session_state.get("cm_tm", DEFAULT_TM)
             th_rows = []
             for b in bd_c:
@@ -858,14 +853,13 @@ with tab_cm:
 
         separador()
 
-        if st.button("Ejecutar simulación correlacionada", use_container_width=True, key="btn_corr5"):
-            with st.spinner(f"Simulando {n_sims5:,} escenarios..."):
+        if st.button("Ejecutar Simulación de Contagio", use_container_width=True, key="btn_corr5"):
+            with st.spinner(f"Simulando {n_sims5:,} caminos usando la matriz Cholesky..."):
                 sims5 = gaussian_copula_simulation(
                     bd_c, st.session_state.get("cm_tm", DEFAULT_TM),
                     st.session_state["cm_corrm"],
                     n_sims=n_sims5, seed=None,
                 )
-                # Obtener E[V] y σ de la simulación, luego VaR paramétrico
                 vc5_raw = var_cvar_from_simulations(sims5, CONF_LEVELS)
                 ev5_c   = vc5_raw[CONF_LEVELS[0]]["EV"]
                 sg5_c   = vc5_raw[CONF_LEVELS[0]]["sigma"]
@@ -874,7 +868,7 @@ with tab_cm:
                 st.session_state["cm_csims"]   = sims5
                 st.session_state["cm_cvars"]   = vc5
                 st.session_state["cm_cscaled"] = sc5
-            themed_success(f"Simulación completada: {n_sims5:,} caminos.")
+            themed_success(f"Simulación masiva completada.")
 
         if "cm_cvars" in st.session_state:
             vc5  = st.session_state["cm_cvars"]
@@ -887,30 +881,30 @@ with tab_cm:
             col_ev5a, col_ev5b = st.columns(2)
             col_ev5a.metric("E[V] simulado",  f"${ev5:,.4f}")
             col_ev5b.metric("σ simulado",     f"${sg5:,.4f}")
+            
+            with paso_a_paso():
+                st.latex(r"Z_i = \sqrt{\rho} M + \sqrt{1-\rho} \epsilon_i")
+                st.latex(r"\text{Threshold}_j = \Phi^{-1}\left(\sum_{k=1}^j p_k\right)")
 
-            # ── Tabla completa de métricas ──────────────────────────────────
-            st.markdown("##### Métricas de Riesgo — 1 año · 1 día · 10 días · Capital")
-            themed_info(
-                f"VaR = Φ⁻¹(α) × σ  ·  "
-                f"CVaR = φ(Φ⁻¹(α)) / (1−α) × σ  ·  "
-                f"VaR_1d = VaR_1y ÷ √{TRADING_DAYS}  ·  Capital = 3 × VaR_10d"
-            )
+            st.markdown("##### Métricas de Riesgo y Contagio")
             df_metrics5 = _build_metrics_table(sc5, CONF_LEVELS, CONF_LABELS, ev5)
             st.dataframe(df_metrics5, hide_index=True, use_container_width=True)
 
-            # ── Métricas visuales para el nivel 99% ─────────────────────────
             r99c = sc5[0.99]
             col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-            col_c1.metric("VaR 1 día (99%)",   f"${r99c['VaR_1d']:,.2f}")
-            col_c2.metric("CVaR 1 día (99%)",  f"${r99c['CVaR_1d']:,.2f}")
-            col_c3.metric("VaR 10 días (99%)", f"${r99c['VaR_10d']:,.2f}")
-            col_c4.metric("Capital requerido", f"${r99c['Capital']:,.2f}",
-                          help="3 × VaR 10 días — multiplicador Basilea II/III")
+            with col_c1: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 1d (99%):<br>${r99c['VaR_1d']:,.2f}</h4>")
+            with col_c2: themed_warning(f"<h4 style='margin:0; color:inherit;'>CVaR 1d (99%):<br>${r99c['CVaR_1d']:,.2f}</h4>")
+            with col_c3: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 10d (99%):<br>${r99c['VaR_10d']:,.2f}</h4>")
+            with col_c4: themed_error(f"<h4 style='margin:0; color:inherit;'>Capital Basilea:<br>${r99c['Capital']:,.2f}</h4>")
             separador()
 
-            # ── Comparativa Independiente vs Correlacionado ─────────────────
             if "cm_iscaled_param" in st.session_state:
-                st.markdown("##### Comparativa: Independiente vs Correlacionado")
+                st.markdown("##### La Prueba de Fuego: Riesgo Cíclico vs Aislado")
+                themed_info(
+                    "Si los activos de una cartera están fuertemente correlacionados, cuando el mercado colapsa, "
+                    "caen juntos. Esta tabla te demuestra cómo el VaR sube considerablemente cuando activas "
+                    "las simulaciones de correlación."
+                )
                 vi_sc = st.session_state["cm_iscaled_param"]
                 comp = []
                 for cf, lb in zip(CONF_LEVELS, CONF_LABELS):
@@ -925,16 +919,10 @@ with tab_cm:
                         "Capital Indep. ($)":      f"${ri['Capital']:,.4f}",
                         "Capital Corr. ($)":       f"${rc5['Capital']:,.4f}",
                         "Δ VaR 10d ($)":           f"${delta_10d:+,.4f}",
-                        "Efecto correlación":      "Mayor riesgo" if delta_10d > 0 else "Menor riesgo",
+                        "Efecto correlación":      "Peligro Sistémico" if delta_10d > 0 else "Estabilidad",
                     })
                 st.dataframe(pd.DataFrame(comp), hide_index=True, use_container_width=True)
-                themed_info(
-                    "Un VaR **mayor** en el caso correlacionado indica riesgo sistémico: "
-                    "cuando los activos están correlacionados positivamente, "
-                    "las pérdidas extremas tienden a ocurrir de forma simultánea."
-                )
 
-            # ── Histograma ──────────────────────────────────────────────────
             fig5 = go.Figure()
             fig5.add_trace(go.Histogram(
                 x=s5, nbinsx=120, name="Distribución simulada",
@@ -948,27 +936,21 @@ with tab_cm:
                 fig5.add_vline(x=q_param, line_dash="dot", line_color=c_th["danger"],
                                annotation_text=f"VaR {lb}")
             fig5.update_layout(
-                title=f"Distribución simulada del portafolio ({n_sims5:,} escenarios)",
-                xaxis_title="Valor del portafolio ($)", yaxis_title="Densidad",
+                title=f"Histograma de Cópula Gaussiana ({n_sims5:,} escenarios)",
+                xaxis_title="Valor del portafolio ($)", yaxis_title="Densidad Probabilística",
                 height=420, **plotly_theme(),
             )
             st.plotly_chart(fig5, use_container_width=True)
 
     # ── ST6: EXPORTAR A EXCEL ─────────────────────────────────────────────────
     with st6:
-        st.markdown("#### Exportar modelo completo a Excel")
+        st.markdown("#### Exportar Arquitectura a Excel")
         themed_info(
-            "Descarga un libro Excel con **7 hojas**: "
-            "(1) Parámetros de los bonos, "
-            "(2) Matriz de transición, "
-            "(3) Curva de tasas y spreads, "
-            "(4) Distribuciones individuales por bono, "
-            "(5) Distribución conjunta convolución, "
-            "(6) Resultados VaR/CVaR 1 año, "
-            "(7) Métricas escaladas: 1 día · 10 días · Capital."
+            "Extrae la memoria completa de las simulaciones y parámetros a una hoja de Excel nativa. "
+            "Perfecto para auditar, presentar o continuar trabajando los datos sin Python."
         )
 
-        if st.button("Generar Excel", use_container_width=True, key="btn_xls"):
+        if st.button("Generar Excel de CreditMetrics", use_container_width=True, key="btn_xls"):
             try:
                 import openpyxl
                 from openpyxl.styles import Font, PatternFill, Alignment
@@ -1137,22 +1119,15 @@ with tab_cm:
 
                 buf = io.BytesIO(); wb.save(buf); buf.seek(0)
                 st.session_state["cm_excel"] = buf.getvalue()
-                themed_success("Libro Excel generado con 7 hojas.")
+                themed_success("Exportación a Excel creada con éxito.")
             except Exception as e:
-                themed_error(f"Error generando Excel: {e}")
-                import traceback; st.code(traceback.format_exc())
+                themed_error(f"Error procesando la descarga: {e}")
 
         if "cm_excel" in st.session_state:
             st.download_button(
-                "Descargar CreditMetrics (.xlsx)",
+                "⬇️ Descargar CreditMetrics (.xlsx)",
                 data=st.session_state["cm_excel"],
                 file_name="CreditMetrics.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
-            )
-            themed_info(
-                "El libro contiene 7 hojas: "
-                "**Parámetros** · **Matriz de Transición** · **Tasas y Spreads** · "
-                "**Distribuciones Individuales** · **Distribución Conjunta** · "
-                "**VaR/CVaR Anual** · **Métricas Escaladas (1d · 10d · Capital)**"
             )

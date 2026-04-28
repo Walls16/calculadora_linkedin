@@ -26,7 +26,7 @@ st.set_page_config(
 engine = get_engine()
 
 page_header(
-    titulo="9. Contratos Forward",
+    titulo="10. Contratos Forward",
     subtitulo="Precio teórico · Valuación en vida · Divisas (PTCI) · FRA"
 )
 
@@ -45,11 +45,11 @@ tab_precio, tab_valor, tab_divisa, tab_fra = st.tabs([
 # TAB 1 — PRECIO TEÓRICO DEL FORWARD
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_precio:
-    st.markdown("### Precio Teórico del Contrato Forward ($F_0$)")
-    themed_info(
-        "El precio forward es el precio justo que evita el arbitraje. "
-        "Se calcula llevando el precio spot al futuro con la tasa libre de riesgo, "
-        "ajustando por cualquier beneficio o costo de mantener el activo subyacente."
+    st.markdown("### Precio Teórico del Contrato Forward")
+    themed_success(
+        "El **Precio Teórico Forward** (<span style='font-family: serif; font-style: italic;'>F<sub>0</sub></span>) es el valor de equilibrio "
+        "que previene el arbitraje. Se calcula proyectando el precio spot al futuro con la tasa libre de riesgo, "
+        "ajustando matemáticamente cualquier beneficio (como dividendos) o costo (como almacenamiento) derivado de mantener el activo subyacente."
     )
 
     col_cap1, col_cap2 = st.columns([1, 1])
@@ -254,16 +254,30 @@ with tab_precio:
 
                 themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>F_0 = {F0_res:,.4f}</h4>")
 
+            # ── Resumen arbitraje ──────────────────────────────────────────────
+            separador()
+            with st.expander("Mecánica de No Arbitraje"):
+                st.markdown(
+                    "Si el precio forward del mercado fuera **mayor** que $F_0$:\n"
+                    "- Compra el activo hoy (pide prestado a tasa $r$).\n"
+                    "- Vende el forward al precio de mercado.\n"
+                    "- Al vencimiento, entrega el activo y gana la diferencia sin riesgo.\n\n"
+                    "Si el precio de mercado fuera **menor** que $F_0$:\n"
+                    "- Vende el activo en corto hoy (invierte el efectivo a $r$).\n"
+                    "- Compra el forward al precio de mercado.\n"
+                    "- Al vencimiento, recibe el activo y cierra el corto sin riesgo."
+                )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 2 — VALUACIÓN EN VIDA
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_valor:
-    st.markdown("### Valor de Mercado del Forward en $t$ ($f_t$)")
+    st.markdown("### Valor de Mercado del Forward en $t$")
     themed_info(
-        "Una vez firmado el contrato, su valor puede ser positivo o negativo "
-        "dependiendo de cómo haya evolucionado el precio spot. "
-        "Esta fórmula es la base de la contabilidad de derivados (IFRS 9 / Hedge Accounting)."
+        "El **Valor de Mercado en Vida** (<span style='font-family: serif; font-style: italic;'>f<sub>t</sub></span>) representa la ganancia "
+        "o pérdida acumulada de un contrato forward ya firmado. A medida que el precio spot fluctúa y el tiempo avanza, "
+        "el contrato adquiere un valor intrínseco positivo para una de las partes. Es la base de la contabilidad de derivados."
     )
 
     col_cap1, col_cap2 = st.columns([1, 1])
@@ -335,9 +349,9 @@ with tab_valor:
 with tab_divisa:
     st.markdown("### Forward sobre Divisas — Paridad Cubierta de Tasas de Interés (PTCI)")
     themed_info(
-        "El precio forward de una divisa se determina por la diferencia entre "
-        "las tasas de interés de los dos países. Si no se cumpliera esta relación, "
-        "existiría arbitraje libre de riesgo entre los mercados de dinero y divisas."
+        "La **Paridad Cubierta de Tasas de Interés (PTCI)** dicta el precio forward de una divisa basándose estrictamente "
+        "en el diferencial de tasas de interés entre dos países. Si el mercado se desvía de este precio de equilibrio, "
+        "se habilitaría un arbitraje libre de riesgo."
     )
 
     col_cap1, col_cap2 = st.columns([1, 1])
@@ -400,7 +414,7 @@ with tab_divisa:
         themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>F_0 = {F0_fx:.4f}</h4>")
 
     separador()
-    with st.expander("Intuición económica de la PTCI"):
+    with st.expander("Fundamento Económico de la PTCI"):
         st.markdown(
             "**¿Por qué la divisa con mayor tasa cotiza con descuento forward?**\n\n"
             "Si el peso (MXN) paga mayor tasa que el dólar (USD), "
@@ -420,9 +434,9 @@ with tab_divisa:
 with tab_fra:
     st.markdown("### Forward Rate Agreement (FRA)")
     themed_info(
-        "Un FRA es un acuerdo para fijar hoy la tasa de interés de un préstamo "
-        "o depósito que comenzará en el futuro. "
-        "Se liquida en efectivo al inicio del periodo (descuento al inicio)."
+        "Un **Forward Rate Agreement (FRA)** es un derivado extrabursátil que permite fijar hoy la tasa de interés "
+        "de un préstamo o depósito que comenzará en el futuro. Se liquida en efectivo al inicio del periodo de cobertura, "
+        "descontando la diferencia entre la tasa de mercado real y la tasa pactada (<span style='font-family: serif; font-style: italic;'>R<sub>K</sub></span>)."
     )
 
     col_cap1, col_cap2 = st.columns([1, 1])
@@ -513,4 +527,4 @@ with tab_fra:
                 st.latex(rf"V_{{FRA}} = {Nf_fra:,.0f} ({diff_R:.6f}) ({tau_fra:.4f}) ({factor:.6f})")
 
             st.latex(rf"V_{{FRA}} = {val_fra:,.2f}")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>V_{{FRA}} = ${val_fra:,.2f}</h4>")
+            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>V_{{FRA}} = ${val_fra:,.2f}</h4>")

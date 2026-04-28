@@ -33,8 +33,16 @@ page_header(
 # =============================================================================
 # SELECTOR DE MODO
 # =============================================================================
+st.markdown("### ¿Qué deseas calcular?")
+themed_info(
+    "Un bono es un instrumento de deuda. Su valuación depende de la relación inversa entre su **Precio (<span style='font-family: serif; font-style: italic;'>P</span>)** "
+    "y su **Tasa de Rendimiento o YTM (<span style='font-family: serif; font-style: italic;'>i</span>)**. <br><br>"
+    "• Si conoces qué tasa de interés exige el mercado, calculamos cuál es el precio justo para comprar/vender el bono hoy.<br>"
+    "• Si conoces a qué precio se está vendiendo el bono en el mercado hoy, calculamos qué tasa de rendimiento ganarás si lo conservas hasta el final."
+)
+
 modo_bono = st.radio(
-    "¿Qué deseas calcular?",
+    "Selecciona un modo de cálculo:",
     [
         "Precio del Bono (P)  →  conozco la Tasa de Rendimiento",
         "Tasa de Rendimiento (YTM)  →  conozco el Precio (P)",
@@ -151,6 +159,7 @@ if modo_bono.startswith("Precio"):
     with paso_a_paso():
         st.latex(r"Fr = F \times \frac{r^{(m)}}{m}")
         st.latex(rf"Fr = {F_bono:,.2f} \times \frac{{{r_nom_bono:.4f}}}{{{m_bono:g}}} = {cupon_Fr:,.4f}")
+        st.write("---")
         
         st.latex(r"P = Fr \left[ \frac{1-(1+i_m)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}")
         st.latex(rf"P = {cupon_Fr:,.4f} \left[ \frac{{1-(1+{str_val_i_mercado})^{{-{n_periodos_bono:g}}}}}{{{str_val_i_mercado}}} \right] + {C_bono:,.2f}(1+{str_val_i_mercado})^{{-{n_periodos_bono:g}}}")
@@ -204,11 +213,12 @@ else:
         st.latex(rf"{precio_mercado:,.2f} = {cupon_Fr:,.4f} \left[ \frac{{1-(1+i_m)^{{-{n_periodos_bono:g}}}}}{{i_m}} \right] + {C_bono:,.2f}(1+i_m)^{{-{n_periodos_bono:g}}}")
         alerta_metodo_numerico()
         
-        st.latex(rf"i_m \approx {i_periodo_res:.6f} \implies {i_periodo_res*100:.4f}\% \text{{ periódica}}")
+        st.latex(rf"i_m \approx {i_periodo_res:.6f} \implies {i_periodo_res*100:.4f}\%")
+        st.write("---")
         st.latex(rf"\text{{YTM}} = i_m \times m")
         st.latex(rf"\text{{YTM}} = {i_periodo_res:.6f} \times {m_bono:g} = {i_nom_res:.6f}")
         
-        themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>YTM = {i_nom_res*100:.4f}\% anual nominal</h4>")
+        themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>\text{{YTM}} = {i_nom_res*100:.4f}\%</h4>")
 
 
 # =============================================================================
@@ -217,7 +227,12 @@ else:
 if i_final is not None and p_final is not None:
 
     separador()
-    st.markdown("### Análisis de Riesgo (Sensibilidad a Tasas)")
+    st.markdown("### Análisis de Riesgo de Tasas de Interés")
+    themed_warning(
+        "Si las tasas del mercado suben, el precio del bono cae (y viceversa). La **Duración Modificada** mide de forma lineal qué tanto "
+        "cae el precio por cada 1% que suba la tasa. Como esta relación no es una línea recta sino una curva, la **Convexidad** "
+        "corrige ese error para darnos una estimación casi perfecta."
+    )
 
     mac_d, mod_d, conv = engine.riesgo_bono(
         F_bono, r_periodo, C_bono, i_final, n_periodos_bono, m_bono
@@ -251,9 +266,11 @@ if i_final is not None and p_final is not None:
 
     # ── Simulador de estrés ───────────────────────────────────────────────────
     with st.expander("Simulador de Estrés de Tasas", expanded=True):
+        st.markdown("#### Simulador")
         st.markdown(
-            "¿Qué pasaría con el precio del bono si el banco central "
-            "mueve las tasas de rendimiento exigidas mañana mismo?"
+            "Utiliza el control deslizante para simular una variación brusca (<span style='font-family: serif; font-style: italic;'>Δy</span>) en las tasas de rendimiento exigidas por el mercado hoy mismo "
+            "y observa cómo impacta matemáticamente al precio actual de tu bono.",
+            unsafe_allow_html=True
         )
 
         delta_y_pct = st.slider(
@@ -273,7 +290,7 @@ if i_final is not None and p_final is not None:
         col_s1, col_s2 = st.columns([1, 1])
 
         with col_s1:
-            themed_warning(f"<h3 style='margin:0; color:inherit;'>Precio Estimado: ${nuevo_precio:,.4f}</h3>")
+            themed_warning(f"<h3 style='margin:0; color:inherit;'>Nuevo Precio: ${nuevo_precio:,.4f}</h3>")
             st.metric(
                 "Impacto Total (Variación)",
                 f"${variacion:+,.4f}",

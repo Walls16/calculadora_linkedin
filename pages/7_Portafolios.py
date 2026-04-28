@@ -41,6 +41,12 @@ page_header(
 # PANEL DE CONFIGURACIÓN
 # =============================================================================
 with st.expander("Configuración del Portafolio y Mercado", expanded=True):
+    themed_info(
+        "Define los activos que formarán tu portafolio, el periodo histórico de análisis y la **Tasa Libre de Riesgo** "
+        "(el rendimiento seguro que pagaría un bono del gobierno). El sistema descargará los precios reales de la bolsa "
+        "y calculará la combinación de pesos matemáticamente perfecta para tu inversión."
+    )
+    
     c_in1, c_in2, c_in3 = st.columns([2, 1, 1])
 
     with c_in1:
@@ -111,8 +117,8 @@ if "datos_portafolio" in st.session_state:
     separador()
     st.markdown("### Portafolio Óptimo — Máximo Ratio de Sharpe")
     themed_success(
-        "La combinación matemáticamente perfecta para maximizar "
-        "el retorno esperado por cada unidad de riesgo asumida."
+        "El **Portafolio de Máximo Sharpe** es la combinación matemática exacta de activos que te ofrece "
+        "el mayor rendimiento esperado posible por cada punto de riesgo (volatilidad) que estás asumiendo."
     )
 
     c1, c2, c3 = st.columns(3)
@@ -134,6 +140,11 @@ if "datos_portafolio" in st.session_state:
     # ── TAB 1: FRONTERA ───────────────────────────────────────────────────────
     with tab_front:
         st.markdown("#### Gráfica Riesgo vs. Rendimiento")
+        themed_info(
+            "La **Frontera Eficiente** es la curva (o límite superior de la nube) que agrupa los mejores portafolios posibles. "
+            "Cada punto en la gráfica es una distribución distinta de tu dinero. Los puntos más altos "
+            "y situados hacia la izquierda representan las combinaciones más eficientes."
+        )
 
         fig_ef = go.Figure()
 
@@ -208,10 +219,11 @@ if "datos_portafolio" in st.session_state:
 
     # ── TAB 2: PESOS ──────────────────────────────────────────────────────────
     with tab_pesos:
-        st.markdown("#### Comparativa de Asignación de Capital ($w_i$)")
-        st.caption(
-            "Observa cómo cambia la distribución de tu dinero dependiendo de "
-            "si buscas máxima eficiencia (Sharpe) o máxima seguridad (Mínima Varianza)."
+        st.markdown("#### Comparativa de Asignación de Capital (<span style='font-family: serif; font-style: italic;'>w<sub>i</sub></span>)", unsafe_allow_html=True)
+        themed_success(
+            "La **Asignación de Capital** muestra el porcentaje exacto de tu dinero que debes "
+            "destinar a cada acción para replicar la estrategia seleccionada (ya sea buscar la máxima eficiencia con Sharpe "
+            "o buscar la máxima estabilidad con Mínima Varianza)."
         )
 
         df_pesos_tab = pd.DataFrame({
@@ -264,9 +276,10 @@ if "datos_portafolio" in st.session_state:
     # ── TAB 3: HISTÓRICO ──────────────────────────────────────────────────────
     with tab_hist:
         st.markdown("#### Precios Históricos Normalizados (Base 100)")
-        st.caption(
-            "Muestra el crecimiento del capital si hubieras invertido $100 "
-            "en cada activo al inicio del periodo analizado."
+        themed_info(
+            "La **Normalización Base 100** iguala matemáticamente el precio de todas tus acciones a $100 al inicio del "
+            "periodo analizado. Esto te permite comparar visualmente el crecimiento y la volatilidad real entre ellas, "
+            "sin que importe si una acción vale en la bolsa $10 y otra $500."
         )
 
         precios_norm = (data / data.iloc[0]) * 100
@@ -284,9 +297,9 @@ if "datos_portafolio" in st.session_state:
     # ── TAB 4: VaR ────────────────────────────────────────────────────────────
     with tab_var:
         st.markdown("#### Análisis de Riesgo Extremo: VaR y CVaR")
-        st.caption(
-            "Pérdida máxima esperada en los horizontes de tiempo "
-            "estándar de la industria financiera y bancaria."
+        themed_warning(
+            "El **Valor en Riesgo (VaR)** proyecta la pérdida de capital máxima esperada que tu portafolio podría sufrir "
+            "en escenarios negativos de mercado, basándose en el nivel de confianza y la volatilidad histórica de los activos."
         )
 
         col_v1, col_v2 = st.columns(2)
@@ -348,10 +361,10 @@ if "datos_portafolio" in st.session_state:
 
     # ── TAB 5: EXPORTAR ───────────────────────────────────────────────────────
     with tab_dl:
-        st.markdown("#### Descarga de Datos para Réplica en Excel o Python")
-        st.caption(
-            "Exporta la matriz de precios o los vectores de pesos óptimos "
-            "para comprobar los resultados manualmente en tus propios modelos."
+        st.markdown("#### Descarga de Datos para Réplica")
+        themed_info(
+            "Exporta la base de datos completa de precios históricos y los vectores de pesos "
+            "óptimos generados por el algoritmo, listos para importarlos a Excel o Python."
         )
 
         col_d1, col_d2 = st.columns(2)

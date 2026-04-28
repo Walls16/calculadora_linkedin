@@ -741,7 +741,8 @@ COLORS = THEMES[_DEFAULT_THEME]
 
 def page_header(titulo: str, subtitulo: str = ""):
     inject_global_css()
-    render_theme_selector()
+    if not st.session_state.get("_nav_setup_done"):
+        render_theme_selector()
     st.markdown(
         '<div class="main-title">Calculadora Financiera y Actuarial</div>',
         unsafe_allow_html=True,
@@ -893,12 +894,25 @@ def index_card(numero: str, titulo: str, descripcion: str, variante: str = "a"):
 # O pasar directamente a px/go:  layout=plotly_layout()
 # =============================================================================
 
+def plotly_color(hex_str: str) -> str:
+    """
+    Convierte colores hex de 8 dígitos (#RRGGBBAA) a 6 dígitos (#RRGGBB)
+    ya que Plotly no acepta el canal alpha en formato hex.
+    Cualquier otro formato de color se devuelve sin cambios.
+    """
+    s = hex_str.strip()
+    if s.startswith("#") and len(s) == 9:
+        return s[:7]
+    return s
+
+
 def plotly_layout(**extra) -> dict:
     """
     Devuelve un dict de layout para Plotly que usa los colores del tema activo.
     Combina con kwargs extra: fig.update_layout(**plotly_layout(height=500))
     """
     c = get_current_theme()
+    border = plotly_color(c["border"])
     base = dict(
         paper_bgcolor = c["bg_main"],
         plot_bgcolor  = c["bg_light"],
@@ -906,23 +920,23 @@ def plotly_layout(**extra) -> dict:
         title_font    = dict(color=c["subtitle_color"]),
         legend        = dict(
             bgcolor     = c["bg_light"],
-            bordercolor = c["border"],
+            bordercolor = border,
             borderwidth = 1,
             font        = dict(color=c["text_color"]),
         ),
         xaxis = dict(
-            gridcolor    = c["border"],
-            linecolor    = c["border"],
+            gridcolor    = border,
+            linecolor    = border,
             tickfont     = dict(color=c["text_muted"]),
             title_font   = dict(color=c["text_color"]),
-            zerolinecolor= c["border"],
+            zerolinecolor= border,
         ),
         yaxis = dict(
-            gridcolor    = c["border"],
-            linecolor    = c["border"],
+            gridcolor    = border,
+            linecolor    = border,
             tickfont     = dict(color=c["text_muted"]),
             title_font   = dict(color=c["text_color"]),
-            zerolinecolor= c["border"],
+            zerolinecolor= border,
         ),
         margin = dict(l=40, r=20, t=50, b=40),
     )
@@ -956,6 +970,7 @@ def plotly_theme() -> dict:
         fig.update_layout(**plotly_theme())
     """
     c = get_current_theme()
+    border = plotly_color(c["border"])
     return dict(
         paper_bgcolor=c["bg_main"],
         plot_bgcolor=c["bg_light"],
@@ -963,25 +978,25 @@ def plotly_theme() -> dict:
         title_font=dict(color=c["subtitle_color"]),
         legend=dict(
             bgcolor=c["bg_light"],
-            bordercolor=c["border"],
+            bordercolor=border,
             borderwidth=1,
             font=dict(color=c["text_color"]),
         ),
         xaxis=dict(
-            gridcolor=c["border"],
-            linecolor=c["border"],
-            tickcolor=c["border"],
+            gridcolor=border,
+            linecolor=border,
+            tickcolor=border,
             tickfont=dict(color=c["text_muted"]),
             title_font=dict(color=c["text_color"]),
-            zerolinecolor=c["border"],
+            zerolinecolor=border,
         ),
         yaxis=dict(
-            gridcolor=c["border"],
-            linecolor=c["border"],
-            tickcolor=c["border"],
+            gridcolor=border,
+            linecolor=border,
+            tickcolor=border,
             tickfont=dict(color=c["text_muted"]),
             title_font=dict(color=c["text_color"]),
-            zerolinecolor=c["border"],
+            zerolinecolor=border,
         ),
         colorway=[
             c["primary"], c["accent"], c["success"],

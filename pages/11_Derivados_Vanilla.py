@@ -18,7 +18,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from scipy.stats import norm as norm
 
-from utils import get_engine, page_header, paso_a_paso, separador, alerta_metodo_numerico, themed_info, themed_success, themed_warning, themed_error, apply_plotly_theme, plotly_theme, plotly_colors, get_current_theme
+from utils import get_engine, page_header, paso_a_paso, separador, alerta_metodo_numerico, themed_info, themed_success, themed_warning, themed_error, apply_plotly_theme, plotly_theme, plotly_colors, plotly_color, get_current_theme
 
 # =============================================================================
 # CONFIGURACIÓN
@@ -32,7 +32,7 @@ st.set_page_config(
 engine = get_engine()
 
 page_header(
-    titulo="10. Valuación de Derivados Vanilla",
+    titulo="11. Valuación de Derivados Vanilla",
     subtitulo="Árbol Binomial CRR · Black-Scholes-Merton · Griegas"
 )
 
@@ -45,7 +45,7 @@ tab_crr, tab_bsm, tab_griegas, tab_comp, tab_est, tab_real, tab_vol = st.tabs([
     "Griegas (BSM)",
     "Comparativa BSM vs CRR",
     "Estrategias con Opciones",
-    "Activos Reales (Yahoo Finance)",
+    "Subyacentes en Vivo",
     "Volatilidad Implicita",
 ])
 
@@ -56,10 +56,10 @@ tab_crr, tab_bsm, tab_griegas, tab_comp, tab_est, tab_real, tab_vol = st.tabs([
 with tab_crr:
     st.markdown("### Árbol Binomial Cox-Ross-Rubinstein (CRR)")
     themed_info(
-        "El árbol binomial discretiza el movimiento del precio en pasos de tiempo &Delta;<span style='font-family: serif; font-style: italic;'>t</span>. "
-        "En cada nodo, el precio sube por <span style='font-family: serif; font-style: italic;'>u</span> o baja por <span style='font-family: serif; font-style: italic;'>d = 1/u</span>. "
-        "La probabilidad neutral al riesgo <span style='font-family: serif; font-style: italic;'>p</span> garantiza la ausencia de arbitraje. "
-        "Con suficientes pasos converge al precio de Black-Scholes."
+        "El **Árbol Binomial (CRR)** proyecta la evolución del precio del subyacente en intervalos de tiempo discretos (<span style='font-family: serif; font-style: italic;'>&Delta;t</span>). "
+        "En cada nodo, el precio puede subir por un factor <span style='font-family: serif; font-style: italic;'>u</span> o bajar por un factor <span style='font-family: serif; font-style: italic;'>d</span>. "
+        "Al utilizar la probabilidad neutral al riesgo (<span style='font-family: serif; font-style: italic;'>p</span>), el modelo descuenta el valor esperado de la opción "
+        "desde el vencimiento hasta el presente garantizando la ausencia de arbitraje."
     )
 
     # ── Inputs ────────────────────────────────────────────────────────────────
@@ -114,7 +114,10 @@ with tab_crr:
     # Métricas principales
     col_r1, col_r2, col_r3, col_r4 = st.columns(4)
     with col_r1:
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_op_crr}: ${precio_crr:,.4f}</h3>")
+        if es_call_crr:
+            themed_success(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_op_crr}: ${precio_crr:,.4f}</h3>")
+        else:
+            themed_error(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_op_crr}: ${precio_crr:,.4f}</h3>")
     col_r2.metric("Factor sube ($u$)",           f"{u_crr:.6f}")
     col_r3.metric("Factor baja ($d$)",           f"{d_crr:.6f}")
     col_r4.metric("Prob. neutral al riesgo ($p$)", f"{p_crr:.4f}")
@@ -138,7 +141,11 @@ with tab_crr:
 
         st.latex(r"p = \frac{a - d}{u - d}")
         st.latex(rf"p = \frac{{{a_crr:.6f} - {d_crr:.6f}}}{{{u_crr:.6f} - {d_crr:.6f}}} = \frac{{{a_crr - d_crr:.6f}}}{{{u_crr - d_crr:.6f}}} = {p_crr:.6f}")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${precio_crr:,.4f}</h4>")
+        
+        if es_call_crr:
+            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${precio_crr:,.4f}</h4>")
+        else:
+            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${precio_crr:,.4f}</h4>")
 
     # ── Árbol visual (solo si N ≤ 10) ─────────────────────────────────────────
     separador()
@@ -146,8 +153,8 @@ with tab_crr:
         st.markdown("#### Árbol de Precios del Subyacente y Valores de la Opción")
 
         tab_arbol_s, tab_arbol_o = st.tabs([
-            "🌿 Árbol del Subyacente",
-            "💵 Árbol de la Opción",
+            "Árbol del Subyacente",
+            "Árbol de la Opción",
         ])
 
         def _renderizar_arbol(matriz, titulo, fmt="$.4f"):
@@ -221,10 +228,11 @@ with tab_crr:
 
     # ── Convergencia a BSM ────────────────────────────────────────────────────
     separador()
-    with st.expander("📈 Convergencia del Árbol Binomial a Black-Scholes"):
-        st.markdown(
-            "A medida que aumentas $N$, el precio binomial converge al precio de BSM. "
-            "Solo se muestra para opciones europeas."
+    with st.expander("Convergencia del Árbol Binomial a Black-Scholes"):
+        themed_info(
+            "El **Teorema del Límite Central** demuestra que el modelo discreto (Árbol Binomial CRR) converge "
+            "asintóticamente a la ecuación continua (Black-Scholes-Merton) a medida que el número de particiones temporales "
+            "(<span style='font-family: serif; font-style: italic;'>N</span>) tiende a infinito. Esta gráfica evalúa dicha convergencia matemáticamente."
         )
 
         if not es_amer_crr:
@@ -272,9 +280,9 @@ with tab_crr:
                 "Precio BSM (límite)": "${:.4f}",
             }), use_container_width=True, hide_index=True)
         else:
-            themed_info(
-                "La convergencia solo se grafica para opciones europeas, "
-                "ya que BSM no tiene fórmula cerrada para opciones americanas."
+            themed_warning(
+                "La convergencia gráfica solo es aplicable para opciones europeas, "
+                "ya que Black-Scholes-Merton no provee una fórmula cerrada exacta para el ejercicio temprano de opciones americanas."
             )
 
 
@@ -284,9 +292,9 @@ with tab_crr:
 with tab_bsm:
     st.markdown("### Black-Scholes-Merton (BSM)")
     themed_info(
-        "BSM es el límite continuo del árbol binomial cuando <span style='font-family: serif; font-style: italic;'>N &rarr; &infin;</span>. "
-        "Asume que el precio del subyacente sigue un movimiento browniano geométrico "
-        "con volatilidad constante. Solo es válido para opciones **europeas**."
+        "El modelo **Black-Scholes-Merton** valúa opciones asumiendo que el precio del subyacente sigue un Movimiento Browniano "
+        "Geométrico en tiempo continuo. Proporciona una solución analítica cerrada y estricta, la cual "
+        "solo es válida para opciones de estilo **Europeo** (ejercicio únicamente a la fecha de vencimiento)."
     )
 
     # ── Selección de variante ─────────────────────────────────────────────────
@@ -418,7 +426,11 @@ with tab_bsm:
 
     with c2:
         if prima_bsm is not None:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_bsm}: ${prima_bsm:,.4f}</h3>")
+            if es_call_bsm:
+                themed_success(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_bsm}: ${prima_bsm:,.4f}</h3>")
+            else:
+                themed_error(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_bsm}: ${prima_bsm:,.4f}</h3>")
+
             st.latex(formula_c if es_call_bsm else formula_p)
             st.latex(formula_d)
 
@@ -434,23 +446,28 @@ with tab_bsm:
             # ── Griegas evaluadas para la misma opcion ──────────────────
             if T_bsm is not None:
                 separador()
-                st.markdown("**Griegas (BSM)**")
-                _q_gr_bsm = locals().get("q_bsm", locals().get("rf_bsm", 0.0))
-                _S_gr_bsm = locals().get("F_bsm", S_bsm)
-                _gr = engine.calcular_griegas(
-                    _S_gr_bsm, K_bsm, r_bsm, sig_bsm, T_bsm, es_call_bsm, _q_gr_bsm
-                )
-                gcol1, gcol2, gcol3, gcol4, gcol5 = st.columns(5)
-                gcol1.metric("Delta", f"{_gr['delta']:+.5f}",
-                             help="+$1 en subyacente → cambio en prima")
-                gcol2.metric("Gamma", f"{_gr['gamma']:.5f}",
-                             help="Cambio en Delta ante +$1")
-                gcol3.metric("Theta (diario)", f"{_gr['theta']:+.5f}",
-                             help="Perdida de valor por dia")
-                gcol4.metric("Vega", f"{_gr['vega']:.5f}",
-                             help="Cambio ante +1% de volatilidad")
-                gcol5.metric("Rho", f"{_gr['rho']:+.5f}",
-                             help="Cambio ante +1% en tasa libre de riesgo")
+                with st.expander("Griegas (BSM) — Sensibilidades del contrato actual", expanded=False):
+                    _q_gr_bsm = locals().get("q_bsm", locals().get("rf_bsm", 0.0))
+                    _S_gr_bsm = locals().get("F_bsm", S_bsm)
+                    _gr = engine.calcular_griegas(
+                        _S_gr_bsm, K_bsm, r_bsm, sig_bsm, T_bsm, es_call_bsm, _q_gr_bsm
+                    )
+                    gcol1, gcol2, gcol3, gcol4, gcol5 = st.columns(5)
+                    gcol1.metric("Delta",
+                                 f"{_gr['delta']:+.5f}",
+                                 help="+$1 en subyacente → cambio en prima")
+                    gcol2.metric("Gamma",
+                                 f"{_gr['gamma']:.5f}",
+                                 help="Cambio en Delta ante +$1 en el subyacente")
+                    gcol3.metric("Theta (diario)",
+                                 f"{_gr['theta']:+.5f}",
+                                 help="Perdida de valor por cada dia natural transcurrido")
+                    gcol4.metric("Vega",
+                                 f"{_gr['vega']:.5f}",
+                                 help="Cambio ante +1% absoluto en volatilidad")
+                    gcol5.metric("Rho",
+                                 f"{_gr['rho']:+.5f}",
+                                 help="Cambio ante +1% en la tasa libre de riesgo")
 
     # ── Paso a paso BSM ───────────────────────────────────────────────────────
     if prima_bsm is not None and variante_bsm != "Opción Perpetua (T → ∞)":
@@ -539,7 +556,10 @@ with tab_bsm:
                 else:
                     st.latex(rf"p = {t2*nNd2:.6f} - {t1*nNd1:.6f} = {prima_bsm:.4f}")
 
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+            if es_call_bsm:
+                themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+            else:
+                themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
             
     elif variante_bsm == "Opción Perpetua (T → ∞)":
         with paso_a_paso():
@@ -554,6 +574,7 @@ with tab_bsm:
                 st.latex(formula_c)
                 st.latex(rf"C^* = \frac{{{K_bsm:.2f}}}{{{h_val:.6f}-1}}\left(\frac{{({h_val:.6f}-1){S_bsm:.2f}}}{{{h_val:.6f}({K_bsm:.2f})}}\right)^{{{h_val:.6f}}}")
                 st.latex(rf"C^* = {K_bsm/(h_val-1):.6f} \left({(h_val-1)*S_bsm / (h_val*K_bsm):.6f}\right)^{{{h_val:.6f}}} = {prima_bsm:.4f}")
+                themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
             else:
                 st.latex(r"h^* = \frac{1}{2} - \sqrt{\frac{1}{4} + \frac{2r}{\sigma^2}}")
                 h_star = 0.5 - np.sqrt(0.25 + 2*r_bsm/(sig_bsm**2))
@@ -561,8 +582,8 @@ with tab_bsm:
                 st.latex(formula_p)
                 st.latex(rf"P^* = \frac{{{K_bsm:.2f}}}{{1 - ({h_star:.6f})}}\left(\frac{{(1 - ({h_star:.6f})){S_bsm:.2f}}}{{{h_star:.6f}({K_bsm:.2f})}}\right)^{{{h_star:.6f}}}")
                 st.latex(rf"P^* = {prima_bsm:.4f}")
-                
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+                themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 3 — GRIEGAS
@@ -570,14 +591,15 @@ with tab_bsm:
 with tab_griegas:
     st.markdown("### Letras Griegas (Sensibilidades de BSM)")
     themed_info(
-        "Las Griegas miden cómo cambia el precio de la opción ante pequeñas "
-        "variaciones en cada parámetro de mercado."
+        "Las **Letras Griegas** son las derivadas matemáticas de la fórmula de Black-Scholes. "
+        "Cuantifican exactamente la sensibilidad (el cambio en el precio de la prima) ante variaciones "
+        "en los factores clave del mercado: precio spot, tiempo al vencimiento, volatilidad y tasas de interés."
     )
 
     c1, c2 = st.columns(2)
 
     with c1:
-        st.markdown("**Parámetros**")
+        st.markdown("**Parámetros de mercado**")
         S_gr   = st.number_input("Precio Spot ($S_0$)", min_value=0.01,
                                   value=100.0, step=1.0, key="gr_S")
         K_gr   = st.number_input("Strike ($K$)", min_value=0.01,
@@ -606,24 +628,24 @@ with tab_griegas:
         rho_g   = griegas["rho"]
 
         st.metric("Δ Delta",  f"{delta_g:+.6f}",
-                  help="Variación del precio de la opción ante +$1 en el subyacente.")
+                  help="Variación del precio de la opción ante un aumento de $1 en el subyacente.")
         st.metric("Γ Gamma",  f"{gamma_g:.6f}",
-                  help="Variación del Delta ante +$1 en el subyacente. Igual para Call y Put.")
+                  help="Variación del Delta ante un aumento de $1 en el subyacente. Es idéntica para Call y Put.")
         st.metric("Θ Theta",  f"{theta_g:+.6f} $/día",
-                  help="Decaimiento del valor de la opción por cada día que pasa.")
+                  help="Pérdida de valor de la opción por cada día natural que pasa (Time Decay).")
         st.metric("𝒱 Vega",   f"{vega_g:.6f} $/1%σ",
-                  help="Variación del precio ante +1% de volatilidad.")
+                  help="Variación del precio de la opción ante un aumento de 1% absoluto en la volatilidad.")
         st.metric("ρ Rho",    f"{rho_g:+.6f} $/1%r",
-                  help="Variación del precio ante +1% en la tasa libre de riesgo.")
+                  help="Variación del precio de la opción ante un aumento de 1% en la tasa libre de riesgo.")
 
     separador()
 
     # ── Fórmulas de las griegas ───────────────────────────────────────────────
-    with st.expander("📐 Fórmulas de las Griegas (BSM con dividendo q)"):
+    with st.expander("Fórmulas Matemáticas de las Griegas (Modelo con dividendo q)"):
         st.latex(r"\Delta_{call} = e^{-qT} N(d_1), \quad \Delta_{put} = -e^{-qT} N(-d_1)")
         st.latex(r"\Gamma = \frac{e^{-qT} n(d_1)}{S_0 \sigma \sqrt{T}}")
         st.latex(r"\Theta_{call} = -\frac{S_0 n(d_1) \sigma e^{-qT}}{2\sqrt{T}} - rKe^{-rT}N(d_2) + qS_0e^{-qT}N(d_1)")
-        st.latex(r"\mathcal{V} = S_0 \sqrt{T} e^{-qT} n(d_1) \quad (\text{por 1\% de }\sigma)")
+        st.latex(r"\mathcal{V} = S_0 \sqrt{T} e^{-qT} n(d_1) \quad (\text{por 1\% absoluto de }\sigma)")
         st.latex(r"\rho_{call} = KTe^{-rT}N(d_2), \quad \rho_{put} = -KTe^{-rT}N(-d_2)")
 
 
@@ -631,10 +653,10 @@ with tab_griegas:
 # TAB 4 — COMPARATIVA BSM vs CRR
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_comp:
-    st.markdown("### Comparativa: BSM vs Árbol Binomial CRR")
-    st.caption(
-        "Usa los mismos parámetros para comparar directamente el precio "
-        "de una opción europea calculada con ambos métodos."
+    st.markdown("### Comparativa de Valuación: BSM vs Árbol Binomial CRR")
+    themed_info(
+        "Utiliza esta herramienta para comprobar matemáticamente que el **Árbol Binomial CRR converge al modelo Black-Scholes-Merton** "
+        "a medida que el número de particiones temporales (<span style='font-family: serif; font-style: italic;'>N</span>) aumenta."
     )
 
     c1, c2, c3 = st.columns(3)
@@ -655,7 +677,7 @@ with tab_comp:
                                    step=0.25, key="cp_T")
         q_cp    = st.number_input("Dividendo continuo ($q$) %",
                                    value=0.0, step=0.1, key="cp_q") / 100
-        tipo_cp = st.radio("Tipo:", ["Call", "Put"],
+        tipo_cp = st.radio("Tipo de Opción Europea:", ["Call", "Put"],
                             horizontal=True, key="cp_tipo")
         es_call_cp = (tipo_cp == "Call")
 
@@ -691,13 +713,13 @@ with tab_comp:
     ))
     fig_comp.add_hline(
         y=bsm_comp, line_dash="dash", line_color="#FF6B6B",
-        annotation_text=f"BSM = ${bsm_comp:.4f}",
+        annotation_text=f"BSM Límite = ${bsm_comp:.4f}",
         annotation_position="right",
     )
     fig_comp.update_layout(
-        xaxis_title="Número de pasos (N)",
-        yaxis_title="Prima ($)",
-        title=f"Convergencia CRR → BSM  |  {tipo_cp}  |  S={S_cp}, K={K_cp}, σ={sig_cp*100:.0f}%, T={T_cp}",
+        xaxis_title="Número de pasos temporales (N)",
+        yaxis_title="Precio de la Prima ($)",
+        title=f"Convergencia Asintótica CRR → BSM  |  {tipo_cp} Europea  |  S={S_cp}, K={K_cp}, σ={sig_cp*100:.0f}%, T={T_cp}",
         height=420,
     )
     fig_comp = apply_plotly_theme(fig_comp)
@@ -716,24 +738,24 @@ with tab_comp:
     )
 
     col_bsm_m, col_crr_m = st.columns(2)
-    col_bsm_m.metric("Precio BSM (referencia)",     f"${bsm_comp:.4f}")
-    col_crr_m.metric("Precio CRR (N=500)",          f"${precios_crr_comp[-1]:.4f}",
-                     delta=f"Δ = ${abs(precios_crr_comp[-1]-bsm_comp):.6f}")
+    col_bsm_m.metric("Precio BSM (Solución Analítica)",     f"${bsm_comp:.4f}")
+    col_crr_m.metric("Precio CRR (N=500 Pasos)",            f"${precios_crr_comp[-1]:.4f}",
+                     delta=f"Margen de Error = ${abs(precios_crr_comp[-1]-bsm_comp):.6f}", delta_color="off")
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 5 — ESTRATEGIAS CON OPCIONES
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_est:
-    st.markdown("### Estrategias con Opciones (Perfil de Riesgo/Rendimiento)")
+    st.markdown("### Estrategias de Cobertura y Especulación (Payoff Neto)")
     themed_info(
-        "Combina múltiples calls y puts para construir cualquier estrategia. "
-        "El perfil neto muestra la ganancia/pérdida al vencimiento en función del "
-        "precio del subyacente."
+        "Las **Estrategias con Opciones** combinan posiciones largas (compras) y cortas (ventas) de Calls y Puts con distintos "
+        "strikes para estructurar un perfil de riesgo/rendimiento asimétrico. El gráfico de *payoff* muestra la "
+        "ganancia o pérdida neta al momento del vencimiento en función del precio final del subyacente."
     )
 
     # ── Selección de estrategia predefinida ──────────────────────────────────
     estrategia_sel = st.selectbox(
-        "Selecciona una estrategia predefinida (o configura manualmente):",
+        "Selecciona un esquema estructural predefinido (o configura los contratos manualmente):",
         [
             "Manual (configura tú mismo)",
             "Bull Call Spread",
@@ -768,23 +790,23 @@ with tab_est:
 
     # ── Configuración de patas según estrategia ───────────────────────────────
     with c2:
-        st.markdown("**Definición de las patas**")
+        st.markdown("**Definición de los Contratos (Patas)**")
 
         # Calcular prima BSM para los strikes comunes
         def _prima(K, es_call):
             return engine.black_scholes(S_est, K, r_est, sig_est, T_est, es_call, q_est)
 
         if estrategia_sel == "Manual (configura tú mismo)":
-            n_patas = st.number_input("Número de patas", min_value=1,
+            n_patas = st.number_input("Número de contratos paralelos", min_value=1,
                                        max_value=6, value=2, step=1, key="est_n_patas")
             patas = []
             for i in range(int(n_patas)):
-                st.markdown(f"**Pata {i+1}**")
+                st.markdown(f"**Contrato {i+1}**")
                 cols_p = st.columns(4)
-                tipo_p   = cols_p[0].selectbox("Tipo", ["call", "put"],
+                tipo_p   = cols_p[0].selectbox("Opción", ["call", "put"],
                                                 key=f"est_tipo_{i}")
-                pos_p    = cols_p[1].selectbox("Posición", [1, -1],
-                                                format_func=lambda x: "Long" if x == 1 else "Short",
+                pos_p    = cols_p[1].selectbox("Postura", [1, -1],
+                                                format_func=lambda x: "Long (Compra)" if x == 1 else "Short (Venta)",
                                                 key=f"est_pos_{i}")
                 K_p      = cols_p[2].number_input("Strike ($K$)", min_value=0.01,
                                                    value=float(S_est), step=1.0,
@@ -797,9 +819,9 @@ with tab_est:
 
         else:
             # Estrategias predefinidas
-            K1_e = st.number_input("Strike bajo ($K_1$)", min_value=0.01,
+            K1_e = st.number_input("Strike de soporte ($K_1$)", min_value=0.01,
                                     value=float(S_est) * 0.95, step=1.0, key="est_K1")
-            K2_e = st.number_input("Strike alto ($K_2$)", min_value=0.01,
+            K2_e = st.number_input("Strike de resistencia ($K_2$)", min_value=0.01,
                                     value=float(S_est) * 1.05, step=1.0, key="est_K2")
 
             c_K1 = _prima(K1_e, True);  p_K1 = _prima(K1_e, False)
@@ -810,14 +832,14 @@ with tab_est:
                     {"tipo": "call", "posicion":  1, "K": K1_e, "prima": c_K1},
                     {"tipo": "call", "posicion": -1, "K": K2_e, "prima": c_K2},
                 ]
-                themed_info("**Long Call** K1 + **Short Call** K2  →  Beneficio si sube moderadamente.")
+                themed_info("**Long Call** K1 + **Short Call** K2  →  Limita el costo inicial a cambio de topar la ganancia. Beneficio direccional si el activo sube moderadamente.")
 
             elif estrategia_sel == "Bear Put Spread":
                 patas = [
                     {"tipo": "put", "posicion":  1, "K": K2_e, "prima": p_K2},
                     {"tipo": "put", "posicion": -1, "K": K1_e, "prima": p_K1},
                 ]
-                themed_info("**Long Put** K2 + **Short Put** K1  →  Beneficio si baja moderadamente.")
+                themed_info("**Long Put** K2 + **Short Put** K1  →  Beneficio direccional si el activo baja moderadamente, financiando el costo del Put con la venta del strike inferior.")
 
             elif estrategia_sel == "Long Straddle":
                 K_mid = (K1_e + K2_e) / 2
@@ -826,7 +848,7 @@ with tab_est:
                     {"tipo": "call", "posicion": 1, "K": K_mid, "prima": c_mid},
                     {"tipo": "put",  "posicion": 1, "K": K_mid, "prima": p_mid},
                 ]
-                themed_info("**Long Call + Long Put** mismo strike  →  Beneficio con movimiento grande (sin importar dirección).")
+                themed_info("**Long Call + Long Put** (mismo strike)  →  Estrategia pura de volatilidad. Genera beneficios si ocurre un movimiento brusco, sin importar la dirección.")
 
             elif estrategia_sel == "Short Straddle":
                 K_mid = (K1_e + K2_e) / 2
@@ -835,14 +857,14 @@ with tab_est:
                     {"tipo": "call", "posicion": -1, "K": K_mid, "prima": c_mid},
                     {"tipo": "put",  "posicion": -1, "K": K_mid, "prima": p_mid},
                 ]
-                themed_info("**Short Call + Short Put** mismo strike  →  Beneficio si el precio se queda quieto.")
+                themed_info("**Short Call + Short Put** (mismo strike)  →  Estrategia de ingreso pasivo. Apuesta a que el precio se quedará estancado cobrando el decaimiento temporal (Theta).")
 
             elif estrategia_sel == "Long Strangle":
                 patas = [
                     {"tipo": "call", "posicion": 1, "K": K2_e, "prima": c_K2},
                     {"tipo": "put",  "posicion": 1, "K": K1_e, "prima": p_K1},
                 ]
-                themed_info("**Long Call** K2 + **Long Put** K1  →  Más barato que Straddle, requiere mayor movimiento.")
+                themed_info("**Long Call** K2 + **Long Put** K1  →  Más barato de estructurar que el Straddle, pero requiere una explosión de volatilidad mucho mayor para romper los puntos de equilibrio.")
 
             elif estrategia_sel == "Butterfly (Long)":
                 K_mid = (K1_e + K2_e) / 2
@@ -852,48 +874,48 @@ with tab_est:
                     {"tipo": "call", "posicion": -2, "K": K_mid,  "prima": c_mid},
                     {"tipo": "call", "posicion":  1, "K": K2_e,  "prima": c_K2},
                 ]
-                themed_info("**Long 1 Call K1 + Short 2 Calls K_mid + Long 1 Call K2** →  Beneficio máximo si el precio termina en K_mid.")
+                themed_info("**Long 1 Call K1 + Short 2 Calls K_mid + Long 1 Call K2** →  Estrategia de bajo costo que busca capturar el máximo beneficio exactamente en el strike central.")
 
             elif estrategia_sel == "Covered Call":
                 patas = [
                     {"tipo": "call", "posicion": -1, "K": K2_e, "prima": c_K2},
                 ]
-                themed_info("**Short Call** K2 (sobre posición larga en el subyacente)  →  Genera ingreso, limita la ganancia.")
-                themed_warning("La pata larga en el subyacente no se muestra en el perfil (se asume comprado a <span style='font-family: serif; font-style: italic;'>S<sub>0</sub></span>).")
+                themed_info("**Short Call** K2 (vendido contra acciones que ya posees)  →  Genera un flujo de efectivo extra constante a cambio de comprometerte a vender si el precio se dispara.")
+                themed_warning("Por simplicidad visual, la pata subyacente (acción en cartera) no se diagrama en el perfil (se asume costo hundido a <span style='font-family: serif; font-style: italic;'>S<sub>0</sub></span>).")
 
             elif estrategia_sel == "Protective Put":
                 patas = [
                     {"tipo": "put", "posicion": 1, "K": K1_e, "prima": p_K1},
                 ]
-                themed_info("**Long Put** K1 (sobre posición larga en el subyacente)  →  Seguro contra caídas.")
-                themed_warning("La pata larga en el subyacente no se muestra en el perfil.")
+                themed_info("**Long Put** K1 (comprado para asegurar un activo)  →  Opera como una póliza de seguro, limitando la pérdida máxima del portafolio.")
+                themed_warning("Por simplicidad visual, la pata subyacente asegurada no se diagrama en el perfil.")
 
             elif estrategia_sel == "Risk Reversal":
                 patas = [
                     {"tipo": "call", "posicion":  1, "K": K2_e, "prima": c_K2},
                     {"tipo": "put",  "posicion": -1, "K": K1_e, "prima": p_K1},
                 ]
-                themed_info("**Long Call** K2 + **Short Put** K1  →  Direccional alcista, se financia con la venta del put.")
+                themed_info("**Long Call** K2 + **Short Put** K1  →  Estructura apalancada. Fija una postura direccional alcista financiando parcial o totalmente el costo del Call.")
 
     separador()
 
     # ── Tabla de patas y primas ───────────────────────────────────────────────
-    st.markdown("#### Resumen de Patas (primas calculadas con BSM)")
+    st.markdown("#### Resumen del Costo de la Estructura (Primas teóricas BSM)")
     df_patas = pd.DataFrame([{
-        "Pata":     i + 1,
-        "Tipo":     p["tipo"].capitalize(),
-        "Posición": "Long" if p["posicion"] > 0 else "Short",
+        "Contrato": 1 + i,
+        "Opción":   p["tipo"].capitalize(),
+        "Postura":  "Long (+)" if p["posicion"] > 0 else "Short (-)",
         "Strike ($K$)": f"${p['K']:,.2f}",
-        "Prima BSM ($)": f"${p['prima']:,.4f}",
-        "Costo Neto ($)": f"${p['posicion'] * p['prima']:+,.4f}",
+        "Prima Teórica ($)": f"${p['prima']:,.4f}",
+        "Flujo Neto ($)": f"${-1 * p['posicion'] * p['prima']:+,.4f}",
     } for i, p in enumerate(patas)])
     st.dataframe(df_patas, use_container_width=True, hide_index=True)
 
     costo_total = sum(p["posicion"] * p["prima"] for p in patas)
     if costo_total < 0:
-        themed_success(f"**Prima neta recibida:** ${abs(costo_total):,.4f}  (estrategia con ingreso inicial)")
+        themed_success(f"**Prima neta recibida:** ${abs(costo_total):,.4f}  (La estructura genera un ingreso inicial de efectivo al mercado)")
     else:
-        themed_info(f"**Prima neta pagada:** ${costo_total:,.4f}  (costo de la estrategia)")
+        themed_error(f"**Prima neta pagada:** ${costo_total:,.4f}  (La estructura requiere un desembolso inicial de capital)")
 
     separador()
 
@@ -906,7 +928,7 @@ with tab_est:
     separador()
 
     # ── Análisis de puntos clave ──────────────────────────────────────────────
-    with st.expander("📐 Análisis de puntos clave (Breakeven aproximado)"):
+    with st.expander("📐 Desglose Financiero (Límites y Puntos de Equilibrio)"):
         S_T_rng = np.linspace(S_est * 0.5, S_est * 1.5, 5000)
         payoff_tot = np.zeros_like(S_T_rng)
         for p in patas:
@@ -919,15 +941,15 @@ with tab_est:
         breakevens = [S_T_rng[i] for i in be_idx]
 
         col_k1, col_k2, col_k3 = st.columns(3)
-        col_k1.metric("Ganancia Máxima",
+        col_k1.metric("Ganancia Máxima Teórica",
                       f"${ganancia_max:,.4f}" if ganancia_max < 1e8 else "Ilimitada")
-        col_k2.metric("Pérdida Máxima",
+        col_k2.metric("Riesgo (Pérdida Máxima)",
                       f"${abs(perdida_max):,.4f}" if perdida_max > -1e8 else "Ilimitada")
         if breakevens:
-            col_k3.metric("Punto(s) de Equilibrio",
+            col_k3.metric("Breakeven (Puntos Muertos)",
                           " | ".join([f"${be:.2f}" for be in breakevens]))
         else:
-            col_k3.metric("Punto(s) de Equilibrio", "N/A")
+            col_k3.metric("Breakeven (Puntos Muertos)", "N/A")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -936,20 +958,19 @@ with tab_est:
 with tab_real:
     st.markdown("### Valuación de Opciones sobre Activos Reales")
     themed_info(
-        "Ingresa el ticker de cualquier activo de Yahoo Finance para obtener el **precio spot actual** "
-        "y la **volatilidad histórica anualizada** automáticamente. "
-        "Después puedes calcular primas BSM y CRR, ver todas las Griegas y el perfil de payoff "
-        "con datos reales del mercado."
+        "Esta integración conecta los modelos teóricos con el **mundo real**. "
+        "Descarga automáticamente el precio de cierre ajustado actual (<span style='font-family: serif; font-style: italic;'>S<sub>0</sub></span>) "
+        "y calcula la volatilidad histórica empírica anualizada (<span style='font-family: serif; font-style: italic;'>&sigma;</span>) a través de la API de Yahoo Finance."
     )
 
     separador()
 
     # ── PASO 1: Buscador de ticker ────────────────────────────────────────────
-    st.markdown("#### Paso 1 — Cargar datos de mercado")
+    st.markdown("#### Paso 1 — Alimentación de Datos de Mercado")
     col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
     with col_t1:
         ticker_real = st.text_input(
-            "Ticker de Yahoo Finance:",
+            "Ticker (Símbolo en Bolsa):",
             value="AAPL",
             key="real_ticker",
             help="Ejemplos: AAPL, TSLA, MSFT, GOOGL, NVDA, SPY, GLD, CEMEXCPO.MX",
@@ -957,16 +978,16 @@ with tab_real:
         ).strip().upper()
     with col_t2:
         st.markdown("<br>", unsafe_allow_html=True)
-        btn_buscar_real = st.button("Buscar en Yahoo Finance", use_container_width=True, key="btn_real")
+        btn_buscar_real = st.button("Descargar Historial de Yahoo Finance", use_container_width=True, key="btn_real")
     with col_t3:
         periodo_vol = st.selectbox(
-            "Ventana de volatilidad:",
-            ["1 año (252 días)", "6 meses (~126 días)", "3 meses (~63 días)"],
+            "Ventana de análisis de Volatilidad:",
+            ["1 año (252 días de trading)", "6 meses (~126 días)", "3 meses (~63 días)"],
             key="real_periodo"
         )
 
     if btn_buscar_real:
-        with st.spinner(f"Consultando datos para {ticker_real}..."):
+        with st.spinner(f"Extrayendo y procesando serie de tiempo para {ticker_real}..."):
             spot_yf, vol_yf = engine.obtener_datos_subyacente(ticker_real)
             if spot_yf is not None:
                 st.session_state["real_spot"] = float(spot_yf)
@@ -977,17 +998,17 @@ with tab_real:
                 st.session_state["real_K"]   = float(spot_yf)   # ATM (K = S)
                 st.session_state["real_sig"] = float(vol_yf * 100)
                 themed_success(
-                    f"**{ticker_real}** cargado correctamente.  \n"
-                    f"S₀ = **${spot_yf:,.2f}** · K (ATM) = **${spot_yf:,.2f}** · "
-                    f"σ = **{vol_yf*100:.2f}%** — campos actualizados automaticamente."
+                    f"**Extracción exitosa para {ticker_real}.** \n"
+                    f"Precio de Cierre (Spot) = **${spot_yf:,.2f}** · "
+                    f"Volatilidad Anualizada = **{vol_yf*100:.2f}%**"
                 )
                 st.rerun()
             else:
                 st.session_state.pop("real_spot", None)
                 st.session_state.pop("real_vol",  None)
                 themed_error(
-                    f"No se encontró **{ticker_real}** o no tiene suficiente historial "
-                    "(se requiere mínimo 20 días de datos). Verifica el símbolo."
+                    f"No se localizó el símbolo **{ticker_real}** o carece de liquidez suficiente "
+                    "(mínimo 20 días de cotización). Intenta con otro ticker."
                 )
 
     # Inicializar valores por defecto en session_state
@@ -1008,11 +1029,7 @@ with tab_real:
     separador()
 
     # ── PASO 2: Parámetros del contrato ──────────────────────────────────────
-    st.markdown("#### Paso 2 — Parámetros del contrato")
-    themed_info(
-        "El Precio Spot y la Volatilidad se auto-completan con los datos de mercado. "
-        "Puedes ajustarlos manualmente antes de calcular."
-    )
+    st.markdown("#### Paso 2 — Configuración del Contrato Estándar")
 
     col_p1, col_p2, col_p3 = st.columns(3)
     with col_p1:
@@ -1022,14 +1039,14 @@ with tab_real:
             key="real_S",
         )
         K_real  = st.number_input(
-            "Precio de Ejercicio ($K$)",
+            "Precio de Ejercicio (Strike $K$)",
             min_value=0.01, step=1.0,
             key="real_K",
         )
-        tipo_real = st.radio("Tipo:", ["Call", "Put"], horizontal=True, key="real_tipo")
-        estilo_real = st.radio("Estilo:", ["Europea", "Americana"], horizontal=True, key="real_estilo")
-        es_call_real = (tipo_real == "Call")
-        es_amer_real = (estilo_real == "Americana")
+        tipo_real = st.radio("Clase de Opción:", ["Call (Derecho de compra)", "Put (Derecho de venta)"], horizontal=True, key="real_tipo")
+        estilo_real = st.radio("Ejercicio:", ["Europea (A término)", "Americana (Flexible)"], horizontal=True, key="real_estilo")
+        es_call_real = (tipo_real == "Call (Derecho de compra)")
+        es_amer_real = (estilo_real == "Americana (Flexible)")
 
     with col_p2:
         sig_real = st.number_input(
@@ -1038,11 +1055,11 @@ with tab_real:
             key="real_sig",
         ) / 100
         r_real   = st.number_input(
-            "Tasa libre de riesgo ($r$) %",
+            "Tasa libre de riesgo continua ($r$) %",
             value=5.0, step=0.1, key="real_r",
         ) / 100
         q_real   = st.number_input(
-            "Dividendo continuo ($q$) %",
+            "Dividendo continuo esperado ($q$) %",
             value=0.0, step=0.1, key="real_q",
         ) / 100
         T_real   = st.number_input(
@@ -1052,32 +1069,32 @@ with tab_real:
 
     with col_p3:
         N_real = st.number_input(
-            "Pasos árbol binomial ($N$)",
+            "Particiones temporales Árbol CRR ($N$)",
             min_value=1, max_value=500, value=100, step=10, key="real_N",
         )
         moneyness = ((S_real - K_real) / K_real) * 100
-        if moneyness > 1:
-            estado_op = "In-The-Money (ITM)"
+        if (moneyness > 1 and es_call_real) or (moneyness < -1 and not es_call_real):
+            estado_op = "In-The-Money (Con valor intrínseco)"
             color_estado = "success"
-        elif moneyness < -1:
-            estado_op = "Out-of-The-Money (OTM)"
+        elif (moneyness < -1 and es_call_real) or (moneyness > 1 and not es_call_real):
+            estado_op = "Out-of-The-Money (Sin valor intrínseco)"
             color_estado = "warning"
         else:
-            estado_op = "At-The-Money (ATM)"
+            estado_op = "At-The-Money (Punto de Equilibrio)"
             color_estado = "info"
 
         st.markdown("<br>", unsafe_allow_html=True)
         if color_estado == "success":
-            themed_success(f"**Estado:** {estado_op}  \n**Moneyness:** {moneyness:+.2f}%")
+            themed_success(f"**Posición actual:** {estado_op}  \n**Moneyness del Strike:** {moneyness:+.2f}%")
         elif color_estado == "warning":
-            themed_warning(f"**Estado:** {estado_op}  \n**Moneyness:** {moneyness:+.2f}%")
+            themed_warning(f"**Posición actual:** {estado_op}  \n**Moneyness del Strike:** {moneyness:+.2f}%")
         else:
-            themed_info(f"**Estado:** {estado_op}  \n**Moneyness:** {moneyness:+.2f}%")
+            themed_info(f"**Posición actual:** {estado_op}  \n**Moneyness del Strike:** {moneyness:+.2f}%")
 
     separador()
 
     # ── PASO 3: Cálculo y resultados ──────────────────────────────────────────
-    st.markdown("#### Paso 3 — Resultados de la Valuación")
+    st.markdown("#### Paso 3 — Reporte Integral de Valuación")
 
     # Precios BSM y CRR
     prima_bsm_real  = engine.black_scholes(S_real, K_real, r_real, sig_real, T_real, es_call_real, q_real)
@@ -1090,22 +1107,19 @@ with tab_real:
 
     col_r1, col_r2 = st.columns(2)
     with col_r1:
-        st.markdown(f"##### Prima sobre **{ticker_label}** — {tipo_real} {estilo_real}")
-        c = get_current_theme()
+        st.markdown(f"##### Prima Absoluta sobre **{ticker_label}**")
         
-        # Uso los themed_info/success según la opción (Call es verde, Put es rojo en tu convención normal)
         if es_call_real:
-            themed_success(f"<h4 style='margin:0; color:inherit;'>BSM — {tipo_real} Europea: ${prima_bsm_real:,.4f}</h4>")
-            themed_success(f"<h4 style='margin:0; color:inherit;'>CRR (N={N_real}) — {tipo_real} {estilo_real}: ${prima_crr_real:,.4f}</h4>")
+            themed_success(f"<h4 style='margin:0; color:inherit;'>Límite Continuo BSM: ${prima_bsm_real:,.4f}</h4>")
+            themed_success(f"<h4 style='margin:0; color:inherit;'>Modelo Discreto CRR: ${prima_crr_real:,.4f}</h4>")
         else:
-            themed_error(f"<h4 style='margin:0; color:inherit;'>BSM — {tipo_real} Europea: ${prima_bsm_real:,.4f}</h4>")
-            themed_error(f"<h4 style='margin:0; color:inherit;'>CRR (N={N_real}) — {tipo_real} {estilo_real}: ${prima_crr_real:,.4f}</h4>")
+            themed_error(f"<h4 style='margin:0; color:inherit;'>Límite Continuo BSM: ${prima_bsm_real:,.4f}</h4>")
+            themed_error(f"<h4 style='margin:0; color:inherit;'>Modelo Discreto CRR: ${prima_crr_real:,.4f}</h4>")
 
         diff_pct = abs(prima_bsm_real - prima_crr_real) / prima_bsm_real * 100 if prima_bsm_real > 0 else 0
-        st.metric("Diferencia BSM vs CRR", f"${abs(prima_bsm_real - prima_crr_real):,.4f}",
+        st.metric("Margen de Discrepancia BSM vs CRR", f"${abs(prima_bsm_real - prima_crr_real):,.4f}",
                   help=f"Diferencia relativa: {diff_pct:.3f}%")
 
-        # Valor intrínseco y temporal
         vi_real = max(S_real - K_real, 0) if es_call_real else max(K_real - S_real, 0)
         vt_real = prima_bsm_real - vi_real
         c_vi1, c_vi2 = st.columns(2)
@@ -1113,7 +1127,7 @@ with tab_real:
         c_vi2.metric("Valor Temporal",   f"${vt_real:,.4f}")
 
     with col_r2:
-        st.markdown("##### Griegas del contrato")
+        st.markdown("##### Griegas (Sensibilidades Dinámicas)")
         g1, g2, g3 = st.columns(3)
         g1.metric("Δ Delta", f"{griegas_real['delta']:+.5f}",
                   help="+$1 en el subyacente → cambio en prima")
@@ -1127,27 +1141,18 @@ with tab_real:
         g5.metric("ρ Rho",   f"{griegas_real['rho']:+.5f}",
                   help="Cambio ante +1% en tasa r")
 
-        separador()
-        # Interpretación rápida
-        themed_info(
-            f"**Delta {griegas_real['delta']:+.4f}:** Por cada $1 que suba **{ticker_label}**, "
-            f"esta opción cambia **${griegas_real['delta']:+.4f}**.  \n"
-            f"**Theta {griegas_real['theta']:+.4f}:** Pierde **${abs(griegas_real['theta']):.4f}** "
-            f"de valor cada día que pasa."
-        )
-
     separador()
 
     # ── Gráfica payoff al vencimiento ─────────────────────────────────────────
-    st.markdown("#### Perfil de Payoff al Vencimiento")
+    st.markdown("#### Matriz de Payoff Asimétrico")
 
     S_range   = np.linspace(S_real * 0.5, S_real * 1.5, 300)
     if es_call_real:
         payoff_r  = np.maximum(S_range - K_real, 0) - prima_bsm_real
-        label_pay = f"Call K={K_real:.2f} (neto)"
+        label_pay = f"Call K={K_real:.2f} (Ganancia Neta)"
     else:
         payoff_r  = np.maximum(K_real - S_range, 0) - prima_bsm_real
-        label_pay = f"Put K={K_real:.2f} (neto)"
+        label_pay = f"Put K={K_real:.2f} (Ganancia Neta)"
 
     c_theme = get_current_theme()
     fig_pay = go.Figure()
@@ -1158,7 +1163,7 @@ with tab_real:
         fill="tozeroy",
         fillcolor=f"rgba({int(c_theme['accent'][1:3],16)},{int(c_theme['accent'][3:5],16)},{int(c_theme['accent'][5:7],16)},0.12)",
     ))
-    fig_pay.add_hline(y=0, line_dash="dash", line_color=c_theme["border"], line_width=1)
+    fig_pay.add_hline(y=0, line_dash="dash", line_color=plotly_color(c_theme["border"]), line_width=1)
     fig_pay.add_vline(
         x=K_real, line_dash="dot", line_color=c_theme["primary"],
         annotation_text=f"K = {K_real:.2f}", annotation_position="top right",
@@ -1168,9 +1173,9 @@ with tab_real:
         annotation_text=f"S₀ = {S_real:.2f}", annotation_position="top left",
     )
     fig_pay.update_layout(
-        title=f"Payoff neto — {tipo_real} {estilo_real} sobre {ticker_label}",
-        xaxis_title="Precio del subyacente al vencimiento ($S_T$)",
-        yaxis_title="Ganancia / Pérdida ($)",
+        title=f"Proyección de Resultados al Vencimiento sobre {ticker_label}",
+        xaxis_title="Precio de Cierre del Activo al Vencimiento ($S_T$)",
+        yaxis_title="Flujo Neto de Efectivo ($)",
         height=400,
         **plotly_theme(),
     )
@@ -1179,10 +1184,10 @@ with tab_real:
     separador()
 
     # ── Tabla de primas para distintos strikes ────────────────────────────────
-    st.markdown("#### Tabla de Primas para Distintos Strikes")
+    st.markdown("#### Matriz de Cadena de Opciones (Option Chain Simulada)")
     themed_info(
-        "Calcula automáticamente el precio de la opción para una cadena de strikes "
-        "alrededor del precio spot actual."
+        "Extrapola la fórmula de Black-Scholes para calcular masivamente el precio teórico "
+        "y el perfil de riesgo (Griegas) en una cuadrícula simétrica de Strikes."
     )
 
     strikes_pct  = [-20, -15, -10, -5, 0, 5, 10, 15, 20]
@@ -1195,14 +1200,13 @@ with tab_real:
         gr_i    = engine.calcular_griegas(S_real, K_i, r_real, sig_real, T_real, es_call_real, q_real)
         mon_i   = ((S_real - K_i) / K_i) * 100
         filas_tabla.append({
-            "Strike ($K$)":   f"${K_i:,.2f}",
+            "Strike Teórico ($K$)":   f"${K_i:,.2f}",
             "Moneyness":      f"{mon_i:+.1f}%",
-            "Prima Call":     f"${prima_c:,.4f}",
-            "Prima Put":      f"${prima_p:,.4f}",
-            "Delta":          f"{gr_i['delta']:+.4f}",
+            "Prima Call Est.":     f"${prima_c:,.4f}",
+            "Prima Put Est.":      f"${prima_p:,.4f}",
+            "Delta de la Cadena":          f"{gr_i['delta']:+.4f}",
             "Gamma":          f"{gr_i['gamma']:.4f}",
-            "Theta ($/día)":  f"{gr_i['theta']:+.4f}",
-            "Vega":           f"{gr_i['vega']:.4f}",
+            "Decaimiento Theta":  f"{gr_i['theta']:+.4f}",
         })
 
     df_cadena = pd.DataFrame(filas_tabla)
@@ -1211,13 +1215,13 @@ with tab_real:
     separador()
 
     # ── Simulación de escenarios ──────────────────────────────────────────────
-    st.markdown("#### Análisis de Sensibilidad")
+    st.markdown("#### Exposición al Riesgo Vectorial (Análisis de Sensibilidad)")
     themed_info(
-        "Explora cómo cambia la prima si la volatilidad o el tiempo varían, "
-        "manteniendo los demás parámetros fijos."
+        "Aísla matemáticamente el efecto de un solo parámetro de mercado sobre el valor de la prima "
+        "asumiendo que todo lo demás permanece estrictamente constante (Céteris Paribus)."
     )
 
-    tab_sens_vol, tab_sens_t = st.tabs(["Por Volatilidad", "Por Tiempo"])
+    tab_sens_vol, tab_sens_t = st.tabs(["Impacto por Choque de Volatilidad", "Impacto por Decaimiento Temporal"])
 
     with tab_sens_vol:
         vol_range = np.linspace(max(sig_real * 0.3, 0.01), sig_real * 2.5, 40)
@@ -1231,16 +1235,16 @@ with tab_real:
             mode="lines+markers",
             line=dict(color=c_theme["primary"], width=2),
             marker=dict(size=5),
-            name="Prima BSM",
+            name="Curva de Valor",
         ))
         fig_vol.add_vline(
             x=sig_real * 100, line_dash="dot", line_color=c_theme["accent"],
-            annotation_text=f"σ actual = {sig_real*100:.1f}%",
+            annotation_text=f"σ de Referencia = {sig_real*100:.1f}%",
         )
         fig_vol.update_layout(
-            title="Prima vs Volatilidad",
-            xaxis_title="Volatilidad σ (%)",
-            yaxis_title="Prima ($)",
+            title="Relación Lineal de la Prima vs Tensión en la Volatilidad",
+            xaxis_title="Espectro de Volatilidad Implícita σ (%)",
+            yaxis_title="Variación en el Valor Absoluto ($)",
             height=360,
             **plotly_theme(),
         )
@@ -1258,16 +1262,16 @@ with tab_real:
             mode="lines+markers",
             line=dict(color=c_theme["success"], width=2),
             marker=dict(size=5),
-            name="Prima BSM",
+            name="Curva de Decaimiento",
         ))
         fig_t.add_vline(
             x=T_real, line_dash="dot", line_color=c_theme["accent"],
-            annotation_text=f"T actual = {T_real:.2f}",
+            annotation_text=f"T de Referencia = {T_real:.2f}",
         )
         fig_t.update_layout(
-            title="Prima vs Tiempo al Vencimiento",
-            xaxis_title="Tiempo al vencimiento T (años)",
-            yaxis_title="Prima ($)",
+            title="Pérdida de Valor por Erosión Temporal (Efecto Theta)",
+            xaxis_title="Horizonte Temporal de Vida Restante (Años)",
+            yaxis_title="Retención de Valor en el Contrato ($)",
             height=360,
             **plotly_theme(),
         )
@@ -1281,74 +1285,43 @@ with tab_vol:
     import datetime as _dt
     from scipy.optimize import brentq as _brentq
 
-    st.markdown("### Volatilidad Implícita y Sonrisa de Volatilidad")
+    st.markdown("### Sonrisa de Volatilidad (Vol Implícita)")
     themed_info(
-        "La **volatilidad implícita** (<span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span>) es la volatilidad que hace que el precio de Black-Scholes iguale "
-        "el precio de mercado actual de la opción. Inversión numérica vía bisección. "
-        "La **sonrisa de volatilidad** grafica <span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span> vs. moneyness (<span style='font-family: serif; font-style: italic;'>K/S</span>) para múltiples strikes, "
-        "revelando las primas de riesgo de cola que el modelo BSM clásico no logra capturar."
+        "A diferencia de la volatilidad histórica (pasado), la **Volatilidad Implícita** (<span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span>) "
+        "revela el riesgo que los inversionistas perciben hacia el *futuro*. Funciona iterando en reversa la fórmula de Black-Scholes para "
+        "encontrar qué porcentaje de volatilidad justifica el precio de cotización real de la opción en la pizarra."
     )
     separador()
 
     # ── Inputs ────────────────────────────────────────────────────────────────
     col_v1, col_v2, col_v3 = st.columns(3)
     with col_v1:
-        st.markdown("**Parámetros del mercado**")
-        S_vol   = st.number_input("Precio Spot ($S_0$)", min_value=0.01,
+        st.markdown("**1. Cotizaciones del Mercado**")
+        S_vol   = st.number_input("Precio Spot de la Acción ($S_0$)", min_value=0.01,
                                    value=st.session_state.get("vol_S_key", 100.0), step=1.0, key="vol_S")
-        r_vol   = st.number_input("Tasa libre de riesgo ($r$) %",
-                                   value=5.0, step=0.1, key="vol_r") / 100
-        q_vol   = st.number_input("Dividendo continuo ($q$) %",
-                                   value=0.0, step=0.1, key="vol_q") / 100
-        T_vol   = st.number_input("Vencimiento ($T$) años",
-                                   min_value=0.01, value=1.0, step=0.25, key="vol_T")
-        tipo_vol = st.radio("Tipo:", ["Call", "Put"], horizontal=True, key="vol_tipo")
-        es_call_vol = (tipo_vol == "Call")
-
-    with col_v2:
-        st.markdown("**Cálculo de σ implícita — una sola opción**")
-        K_vol      = st.number_input("Strike ($K$)", min_value=0.01,
-                                      value=st.session_state.get("vol_K_key", 100.0), step=1.0, key="vol_K")
-        precio_mkt = st.number_input("Precio de mercado de la opción ($)",
+        K_vol      = st.number_input("Strike Pactado ($K$)", min_value=0.01,
+                                      value=st.session_state.get("vol_K_key", 100.0), step=1.0, key="vol_K_man")
+        precio_mkt = st.number_input("Prima Negociada en Bolsa ($)",
                                       min_value=0.001, value=st.session_state.get("vol_precio_key", 10.0),
                                       step=0.5, key="vol_precio")
-        # Calcular vol implícita
-        def _bsm_price(sigma):
-            return engine.black_scholes(S_vol, K_vol, r_vol, sigma, T_vol,
-                                         es_call_vol, q_vol) - precio_mkt
-        try:
-            sig_impl = _brentq(_bsm_price, 1e-6, 10.0, xtol=1e-8, maxiter=200)
-            c_th_v = get_current_theme()
-            themed_success(
-                f"<h3 style='margin:0; color:inherit;'>Volatilidad Implícita (σ_impl): {sig_impl*100:.4f}%</h3>"
-            )
-            # Intrinsic value
-            vi_v = max(S_vol-K_vol, 0) if es_call_vol else max(K_vol-S_vol, 0)
-            vt_v = precio_mkt - vi_v
-            st.metric("Valor intrínseco", f"${vi_v:.4f}")
-            st.metric("Valor temporal",   f"${vt_v:.4f}")
-            st.metric("Moneyness (K/S)",  f"{K_vol/S_vol:.4f}")
-            
-            with paso_a_paso():
-                st.latex(r"f(\sigma_{impl}) = \text{BSM}(\sigma_{impl}) - P_{mercado} = 0")
-                st.latex(rf"f(\sigma_{{impl}}) = \text{{BSM}}({S_vol:,.2f}, {K_vol:,.2f}, {r_vol:.4f}, \sigma_{{impl}}, {T_vol:.4f}) - {precio_mkt:,.4f} = 0")
-                alerta_metodo_numerico()
-                st.latex(rf"\sigma_{{impl}} \approx {sig_impl:.6f}")
-                themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>\sigma_{{impl}} = {sig_impl*100:.4f}\%</h4>")
-                
-        except ValueError:
-            themed_error(
-                "No se encontró σ_impl. El precio de mercado puede estar fuera del rango "
-                "teórico (mayor que el subyacente o menor que el valor intrínseco)."
-            )
-            sig_impl = None
+
+    with col_v2:
+        st.markdown("**2. Ecosistema de Tasas**")
+        r_vol   = st.number_input("Tasa libre de riesgo continua ($r$) %",
+                                   value=5.0, step=0.1, key="vol_r") / 100
+        q_vol   = st.number_input("Carga por dividendo continuo ($q$) %",
+                                   value=0.0, step=0.1, key="vol_q") / 100
+        T_vol   = st.number_input("Años al expiración del derecho ($T$)",
+                                   min_value=0.01, value=1.0, step=0.25, key="vol_T")
+        tipo_vol = st.radio("Posición del contrato:", ["Call (Opción de Compra)", "Put (Opción de Venta)"], horizontal=True, key="vol_tipo")
+        es_call_vol = (tipo_vol == "Call (Opción de Compra)")
 
     with col_v3:
-        st.markdown("**Cargar datos reales (Yahoo Finance)**")
-        ticker_vol = st.text_input("Ticker:", value="AAPL", key="vol_tick").strip().upper()
-        btn_vol_yf = st.button("Obtener S₀ y simular Precio de Mercado", key="btn_vol_yf")
+        st.markdown("**Extracción Inyectada (API Yahoo)**")
+        ticker_vol = st.text_input("Ingresar Ticker Global:", value="AAPL", key="vol_tick").strip().upper()
+        btn_vol_yf = st.button("Sincronizar Datos Teóricos", key="btn_vol_yf")
         if btn_vol_yf:
-            with st.spinner("Descargando..."):
+            with st.spinner("Estableciendo enlace de red y calculando factor de prima de riesgo..."):
                 sv, vv = engine.obtener_datos_subyacente(ticker_vol)
                 if sv is not None:
                     # Configurar variables en memoria
@@ -1360,59 +1333,84 @@ with tab_vol:
                     st.session_state["vol_precio_key"] = float(precio_mercado_simulado)
                     
                     themed_success(
-                        f"**{ticker_vol}** cargado con éxito. \n"
-                        f"Spot ($S_0$) y Strike ($K$) fijados en **${sv:,.2f}**.\n\n"
-                        f"**NOTA:** Se calculó un Precio de Mercado simulado asumiendo un 5% de prima de riesgo sobre la Vol. Histórica ({vv*100:.2f}%)."
+                        f"**{ticker_vol} Sincronizado.** \n"
+                        f"Spot ($S_0$) ajustado al cierre en **${sv:,.2f}**.\n\n"
+                        f"**AVISO DE SIMULACIÓN:** Como la API no retorna libros de opciones crudos, se generó un Precio de Mercado sintético inyectando un 5% absoluto de tensión institucional sobre la volatilidad histórica del activo ({vv*100:.2f}%)."
                     )
                     st.rerun()
                 else:
-                    themed_error(f"No se encontró {ticker_vol}.")
+                    themed_error(f"Pérdida de conexión o ticker {ticker_vol} huérfano de datos.")
+
+    separador()
+    
+    # Calcular vol implícita
+    def _bsm_price(sigma):
+        return engine.black_scholes(S_vol, K_vol, r_vol, sigma, T_vol,
+                                        es_call_vol, q_vol) - precio_mkt
+    try:
+        sig_impl = _brentq(_bsm_price, 1e-6, 10.0, xtol=1e-8, maxiter=200)
+        c_th_v = get_current_theme()
+        themed_success(
+            f"<h3 style='margin:0; color:inherit;'>Riesgo Extraído (Volatilidad Implícita): {sig_impl*100:.4f}%</h3>"
+        )
+        
+        with paso_a_paso():
+            st.latex(r"f(\sigma_{impl}) = \text{BSM}(\sigma_{impl}) - P_{mercado} = 0")
+            st.latex(rf"f(\sigma_{{impl}}) = \text{{BSM}}({S_vol:,.2f}, {K_vol:,.2f}, {r_vol:.4f}, \sigma_{{impl}}, {T_vol:.4f}) - {precio_mkt:,.4f} = 0")
+            alerta_metodo_numerico()
+            st.latex(rf"\sigma_{{impl}} \approx {sig_impl:.6f}")
+            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>\sigma_{{impl}} = {sig_impl*100:.4f}\%</h4>")
+            
+    except ValueError:
+        themed_error(
+            "Desviación Teórica: El precio de mercado cargado es matemáticamente insostenible "
+            "(se encuentra por debajo del valor intrínseco o es superior al valor nominal del activo). "
+            "El algoritmo de optimización no puede converger."
+        )
+        sig_impl = None
 
     separador()
 
     # ── SONRISA DE VOLATILIDAD ─────────────────────────────────────────────────
-    st.markdown("#### Sonrisa de Volatilidad — σ implícita vs. Strike")
+    st.markdown("#### Matriz Tridimensional de Superficie y Sonrisa")
     themed_info(
-        "Ingresa precios de mercado para una cadena de strikes y visualiza la sonrisa. "
-        "En el mundo real, la <span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span> varía según el strike (y no es constante como asume BSM), "
-        "revelando el **sesgo de volatilidad** y la **prima de riesgo de cola**."
+        "En un mercado perfectamente Gaussiano, la volatilidad implícita sería una línea plana horizontal (Teoría BSM). "
+        "En la práctica, las opciones Out-of-the-Money se sobrevaloran por miedo a 'Cisnes Negros', creando la clásica **Sonrisa** "
+        "o **Sesgo de Volatilidad (Skew)**. Al extenderla por expiraciones, formamos una topología completa de riesgo de mercado."
     )
 
     c_th_v2 = get_current_theme()
 
-    # Tabla de precios de mercado por strike
     strikes_pct_def = [-20, -15, -10, -5, -2, 0, 2, 5, 10, 15, 20]
     strikes_def = [round(S_vol * (1 + p/100), 2) for p in strikes_pct_def]
 
-    # Generate default prices using a vol smile (higher for OTM puts)
-    # If the user used the button, we anchor the smile to their newly generated implied volatility
     sig_atm = sig_impl if sig_impl else 0.20
     def _smile_vol(K):
         m = np.log(K / S_vol)
-        return sig_atm + 0.04 * m**2 - 0.01 * m  # synthetic smile
+        return sig_atm + 0.04 * m**2 - 0.01 * m
 
     def_prices = [round(engine.black_scholes(S_vol, K, r_vol, _smile_vol(K), T_vol,
                                               es_call_vol, q_vol), 4)
                   for K in strikes_def]
 
     df_chain = pd.DataFrame({
-        "Strike ($K$)": strikes_def,
-        "Precio de mercado ($)": def_prices,
+        "Nivel de Ejecución ($K$)": strikes_def,
+        "Prima Cotizada Libre ($)": def_prices,
     })
-    st.caption("Edita los **Precios de mercado** para usar cotizaciones reales:")
+    
+    st.caption("Pizarra Interbancaria (Modifica las primas libremente para forzar una recalibración asimétrica):")
     ed_chain = st.data_editor(
         df_chain, hide_index=True, use_container_width=True,
         column_config={
-            "Strike ($K$)":        st.column_config.NumberColumn("Strike ($K$)", format="%.2f", step=1.0),
-            "Precio de mercado ($)": st.column_config.NumberColumn("Precio Mkt ($)", format="%.4f", step=0.01, min_value=0.0001),
+            "Nivel de Ejecución ($K$)":        st.column_config.NumberColumn("Strike ($K$)", format="%.2f", step=1.0),
+            "Prima Cotizada Libre ($)": st.column_config.NumberColumn("Costo de Pizarra ($)", format="%.4f", step=0.01, min_value=0.0001),
         }
     )
 
-    # Calcular σ implícita para cada fila
     impl_vols = []
     for _, row in ed_chain.iterrows():
-        K_r = float(row["Strike ($K$)"])
-        P_r = float(row["Precio de mercado ($)"])
+        K_r = float(row["Nivel de Ejecución ($K$)"])
+        P_r = float(row["Prima Cotizada Libre ($)"])
         try:
             def _f(sigma): return engine.black_scholes(S_vol, K_r, r_vol, sigma, T_vol,
                                                         es_call_vol, q_vol) - P_r
@@ -1421,9 +1419,8 @@ with tab_vol:
             sv_r = np.nan
         impl_vols.append(sv_r)
 
-    moneyness = [K/S_vol for K in ed_chain["Strike ($K$)"].values]
+    moneyness = [K/S_vol for K in ed_chain["Nivel de Ejecución ($K$)"].values]
 
-    # Gráficas
     col_smile1, col_smile2 = st.columns(2)
 
     with col_smile1:
@@ -1433,55 +1430,43 @@ with tab_vol:
             ms, vs = zip(*valid)
             fig_smile.add_trace(go.Scatter(
                 x=list(ms), y=[v*100 for v in vs],
-                mode="lines+markers", name="σ implícita",
+                mode="lines+markers", name="σ recuperada",
                 line=dict(color=c_th_v2["accent"], width=2.5),
                 marker=dict(size=8, color=c_th_v2["primary"]),
             ))
             fig_smile.add_hline(y=sig_atm*100, line_dash="dot",
                                  line_color=c_th_v2["text_muted"],
-                                 annotation_text=f"σ ATM={sig_atm*100:.1f}%")
+                                 annotation_text=f"Ancla BSM={sig_atm*100:.1f}%")
             fig_smile.add_vline(x=1.0, line_dash="dash",
                                  line_color=c_th_v2["success"],
-                                 annotation_text="ATM (K=S)")
+                                 annotation_text="ATM Neutro")
         fig_smile.update_layout(
-            title="Sonrisa de Volatilidad",
-            xaxis_title="Moneyness (K/S)",
-            yaxis_title="Volatilidad Implícita (%)",
+            title="Curvatura Estructural (Volatility Smile)",
+            xaxis_title="Relación Moneyness Estricta (K/S)",
+            yaxis_title="Varianza de Mercado (%)",
             height=400, **plotly_theme(),
         )
         st.plotly_chart(fig_smile, use_container_width=True)
 
     with col_smile2:
-        # Tabla de resultados
         df_res_vol = pd.DataFrame({
-            "Strike":       ed_chain["Strike ($K$)"].values,
-            "Moneyness":    [f"{m:.4f}" for m in moneyness],
-            "Precio Mkt":   [f"${p:.4f}" for p in ed_chain["Precio de mercado ($)"].values],
-            "σ_impl (%)":   [f"{v*100:.4f}%" if not np.isnan(v) else "—" for v in impl_vols],
-            "Estado":       ["ITM" if (K > S_vol and es_call_vol) or (K < S_vol and not es_call_vol)
-                              else "ATM" if abs(K/S_vol - 1) < 0.02 else "OTM"
-                              for K in ed_chain["Strike ($K$)"].values],
+            "Régimen $K":       ed_chain["Nivel de Ejecución ($K$)"].values,
+            "Distancia (Moneyness)":    [f"{m:.4f}" for m in moneyness],
+            "Lectura (Ticket)":   [f"${p:.4f}" for p in ed_chain["Prima Cotizada Libre ($)"].values],
+            "Asimetría (σ_impl)":   [f"{v*100:.4f}%" if not np.isnan(v) else "—" for v in impl_vols],
         })
         st.dataframe(df_res_vol, hide_index=True, use_container_width=True, height=370)
 
-    # Superficie de volatilidad
     separador()
-    st.markdown("#### Superficie de Volatilidad vs. Strike y Vencimiento")
-    themed_info(
-        "Extensión de la sonrisa a múltiples vencimientos. "
-        "Basada en la <span style='font-family: serif; font-style: italic;'>&sigma;<sub>impl</sub></span> calculada con el vencimiento actual — ajustada "
-        "heurísticamente por estructura de plazos (solo con fines ilustrativos)."
-    )
 
-    T_vals  = [0.083, 0.25, 0.5, 1.0, 2.0]  # 1m, 3m, 6m, 1y, 2y
-    T_labs  = ["1m","3m","6m","1y","2y"]
+    T_vals  = [0.083, 0.25, 0.5, 1.0, 2.0]
+    T_labs  = ["1 MES","1 TRIM","1 SEM","1 AÑO","2 AÑOS"]
     K_vals  = [S_vol*(1+p/100) for p in range(-25, 30, 5)]
 
     surf_z = []
     for T_s in T_vals:
         row_s = []
         for K_s in K_vals:
-            # Synthetic smile that changes with T (term structure)
             m_s = np.log(K_s/S_vol) / np.sqrt(T_s)
             sigma_s = sig_atm + 0.03*m_s**2 - 0.008*m_s + 0.005/T_s
             row_s.append(sigma_s*100)
@@ -1490,20 +1475,15 @@ with tab_vol:
     fig_surf = go.Figure(data=go.Surface(
         z=surf_z, x=K_vals, y=T_labs,
         colorscale="Viridis",
-        colorbar=dict(title="σ_impl (%)"),
+        colorbar=dict(title="Extracción σ (%)"),
     ))
     fig_surf.update_layout(
-        title="Superficie de Volatilidad (ilustrativa)",
+        title="Simulación Espacial Estocástica de la Superficie de Volatilidad",
         scene=dict(
-            xaxis_title="Strike ($K$)",
-            yaxis_title="Vencimiento",
-            zaxis_title="σ_impl (%)",
+            xaxis_title="Eje Financiero ($K$)",
+            yaxis_title="Vecto Cronológico (T)",
+            zaxis_title="Elevación Riesgo (%)",
         ),
         height=500, **plotly_theme(),
     )
     st.plotly_chart(fig_surf, use_container_width=True)
-    themed_warning(
-        "La superficie ilustrativa usa una fórmula heurística. "
-        "Para una superficie real, carga los precios de mercado de opciones reales "
-        "para cada vencimiento usando el buscador de Yahoo Finance en el tab Activos Reales."
-    )
