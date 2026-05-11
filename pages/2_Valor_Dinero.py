@@ -22,6 +22,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;" # ¡Actualizado a 20px!
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="2. Valor del Dinero en el Tiempo",
     subtitulo="Interés compuesto · VP · VF · Tasa de rendimiento · Número de periodos"
@@ -68,14 +75,19 @@ with t1:
         formula_vf = r"VF = C_0 (1+i)^n"
 
         with c2:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Valor Futuro: ${vf_res:,.2f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Futuro (VF)</span>"
+                f"<span style='{css_valor}'>${vf_res:,.2f}</span>"
+                f"</div>"
+            )
             st.latex(formula_vf)
 
         with paso_a_paso():
             st.latex(formula_vf)
             st.latex(rf"VF = {C0_vf:,.2f} (1 + {i_vf:.4f})^{{{n_vf:g}}}")
             st.latex(rf"VF = {C0_vf:,.2f} ({(1+i_vf)**n_vf:.6f})")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_res:,.2f}</h4>")
+            themed_success(f"<div style='{css_paso}'>VF = ${vf_res:,.2f}</div>")
 
     # ── Nominal ───────────────────────────────────────────
     elif escenario_vf == "Tasa nominal":
@@ -91,7 +103,12 @@ with t1:
         formula_vf = r"VF = C_0 \left(1+\frac{i^{(m)}}{m}\right)^{nm}"
 
         with c2:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Valor Futuro: ${vf_res:,.2f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Futuro (VF)</span>"
+                f"<span style='{css_valor}'>${vf_res:,.2f}</span>"
+                f"</div>"
+            )
             st.latex(formula_vf)
 
         with paso_a_paso():
@@ -99,7 +116,7 @@ with t1:
             st.latex(rf"VF = {C0_vf:,.2f} \left(1 + \frac{{{i_nom_vf:.4f}}}{{{m_vf:g}}}\right)^{{{n_vf2:g} \times {m_vf:g}}}")
             st.latex(rf"VF = {C0_vf:,.2f} (1 + {im_vf:.6f})^{{{nm_vf:g}}}")
             st.latex(rf"VF = {C0_vf:,.2f} ({(1+im_vf)**nm_vf:.6f})")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_res:,.2f}</h4>")
+            themed_success(f"<div style='{css_paso}'>VF = ${vf_res:,.2f}</div>")
 
     # ── Instantánea ───────────────────────────────────────
     else:
@@ -112,7 +129,12 @@ with t1:
         formula_vf = r"VF = C_0 e^{\delta n}"
 
         with c2:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Valor Futuro: ${vf_res:,.2f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Futuro (VF)</span>"
+                f"<span style='{css_valor}'>${vf_res:,.2f}</span>"
+                f"</div>"
+            )
             st.latex(formula_vf)
 
         with paso_a_paso():
@@ -120,7 +142,7 @@ with t1:
             st.latex(rf"VF = {C0_vf:,.2f} e^{{({d_vf:.4f})({n_vf3:g})}}")
             st.latex(rf"VF = {C0_vf:,.2f} e^{{{d_vf*n_vf3:.6f}}}")
             st.latex(rf"VF = {C0_vf:,.2f} ({np.exp(d_vf*n_vf3):.6f})")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_res:,.2f}</h4>")
+            themed_success(f"<div style='{css_paso}'>VF = ${vf_res:,.2f}</div>")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -155,14 +177,19 @@ with t2:
         formula_vp = r"VP = C_n (1+i)^{-n}"
 
         with c2:
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Valor Presente: ${vp_res:,.2f}</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Presente (VP)</span>"
+                f"<span style='{css_valor}'>${vp_res:,.2f}</span>"
+                f"</div>"
+            )
             st.latex(formula_vp)
 
         with paso_a_paso():
             st.latex(formula_vp)
             st.latex(rf"VP = {Cn_vp:,.2f} (1 + {i_vp:.4f})^{{-{n_vp:g}}}")
             st.latex(rf"VP = {Cn_vp:,.2f} ({(1+i_vp)**(-n_vp):.6f})")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_res:,.2f}</h4>")
+            themed_info(f"<div style='{css_paso}'>VP = ${vp_res:,.2f}</div>")
 
     # ── Nominal ───────────────────────────────────────────
     elif escenario_vp == "Tasa nominal":
@@ -178,7 +205,12 @@ with t2:
         formula_vp = r"VP = C_n \left(1+\frac{i^{(m)}}{m}\right)^{-nm}"
 
         with c2:
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Valor Presente: ${vp_res:,.2f}</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Presente (VP)</span>"
+                f"<span style='{css_valor}'>${vp_res:,.2f}</span>"
+                f"</div>"
+            )
             st.latex(formula_vp)
 
         with paso_a_paso():
@@ -186,7 +218,7 @@ with t2:
             st.latex(rf"VP = {Cn_vp:,.2f} \left(1 + \frac{{{i_nom_vp:.4f}}}{{{m_vp:g}}}\right)^{{-({n_vp2:g} \times {m_vp:g})}}")
             st.latex(rf"VP = {Cn_vp:,.2f} (1 + {im_vp:.6f})^{{-{nm_vp:g}}}")
             st.latex(rf"VP = {Cn_vp:,.2f} ({(1+im_vp)**(-nm_vp):.6f})")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_res:,.2f}</h4>")
+            themed_info(f"<div style='{css_paso}'>VP = ${vp_res:,.2f}</div>")
 
     # ── Instantánea ───────────────────────────────────────
     else:
@@ -199,7 +231,12 @@ with t2:
         formula_vp = r"VP = C_n e^{-\delta n}"
 
         with c2:
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Valor Presente: ${vp_res:,.2f}</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Presente (VP)</span>"
+                f"<span style='{css_valor}'>${vp_res:,.2f}</span>"
+                f"</div>"
+            )
             st.latex(formula_vp)
 
         with paso_a_paso():
@@ -207,7 +244,7 @@ with t2:
             st.latex(rf"VP = {Cn_vp:,.2f} e^{{-({d_vp:.4f})({n_vp3:g})}}")
             st.latex(rf"VP = {Cn_vp:,.2f} e^{{-{d_vp*n_vp3:.6f}}}")
             st.latex(rf"VP = {Cn_vp:,.2f} ({np.exp(-d_vp*n_vp3):.6f})")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_res:,.2f}</h4>")
+            themed_info(f"<div style='{css_paso}'>VP = ${vp_res:,.2f}</div>")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -229,7 +266,12 @@ with t3:
 
     with c2:
         n_res = engine.numero_periodos(va_nper, vf_nper, i_nper)
-        themed_info(f"<h3 style='margin:0; color:inherit;'>Número de Periodos (n): {n_res:.5f}</h3>")
+        themed_info(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Número de Periodos (<span style='{math_style}'>n</span>)</span>"
+            f"<span style='{css_valor}'>{n_res:.5f}</span>"
+            f"</div>"
+        )
         st.latex(r"n = \frac{\ln(C_n/C_0)}{\ln(1+i)}")
 
     separador()
@@ -246,7 +288,7 @@ with t3:
         st.latex(rf"n = \frac{{\ln({vf_nper:,.2f} / {va_nper:,.2f})}}{{\ln(1 + {i_nper:.4f})}}")
         st.latex(rf"n = \frac{{\ln({ratio:.6f})}}{{\ln({1+i_nper:.6f})}}")
         st.latex(rf"n = \frac{{{num:.6f}}}{{{den:.6f}}}")
-        themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>n = {n_res:.5f} \text{{ periodos}}</h4>")
+        themed_info(f"<div style='{css_paso}'><span style='{math_style}'>n</span> = {n_res:.5f} periodos</div>")
 
     # Desglose del tiempo exacto
     separador()
@@ -283,7 +325,12 @@ with t4:
 
     with c2:
         i_res = engine.tasa_rendimiento(va_rate, vf_rate, n_rate)
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Tasa de Rendimiento (i): {i_res*100:.4f}%</h3>")
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Tasa de Rendimiento (<span style='{math_style}'>i</span>)</span>"
+            f"<span style='{css_valor}'>{i_res*100:.4f}%</span>"
+            f"</div>"
+        )
         st.latex(r"i = \left(\frac{C_n}{C_0}\right)^{\frac{1}{n}} - 1")
 
     separador()
@@ -299,4 +346,4 @@ with t4:
         st.latex(rf"i = \left(\frac{{{vf_rate:,.2f}}}{{{va_rate:,.2f}}}\right)^{{\frac{{1}}{{{n_rate:g}}}}} - 1")
         st.latex(rf"i = ({ratio:.6f})^{{{exp_val:.6f}}} - 1")
         st.latex(rf"i = {ratio**exp_val:.6f} - 1")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>i = {i_res*100:.4f}\% \text{{ por periodo}}</h4>")
+        themed_success(f"<div style='{css_paso}'><span style='{math_style}'>i</span> = {i_res*100:.4f}% por periodo</div>")

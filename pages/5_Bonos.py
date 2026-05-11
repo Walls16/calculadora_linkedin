@@ -25,6 +25,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="5. Valuación de Bonos y Obligaciones",
     subtitulo="Precio limpio · Yield to Maturity (YTM) · Duración · Convexidad · Simulador de estrés"
@@ -138,7 +145,12 @@ if modo_bono.startswith("Precio"):
     col_res1, col_res2 = st.columns([1, 1])
 
     with col_res1:
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Precio del Bono (P): ${precio_P:,.4f}</h3>")
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Precio del Bono (<span style='{math_style}'>P</span>)</span>"
+            f"<span style='{css_valor}'>${precio_P:,.4f}</span>"
+            f"</div>"
+        )
         st.metric("VP de Cupones", f"${vp_cup:,.4f}")
         st.metric("VP de Redención", f"${vp_red:,.4f}")
         
@@ -171,7 +183,7 @@ if modo_bono.startswith("Precio"):
         st.latex(rf"P = {cupon_Fr:,.4f} [{factor_a:.6f}] + {C_bono:,.2f}({factor_d:.6f})")
         st.latex(rf"P = {vp_cup:,.4f} + {vp_red:,.4f}")
         
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>P = ${precio_P:,.4f}</h4>")
+        themed_success(f"<div style='{css_paso}'><span style='{math_style}'>P</span> = ${precio_P:,.4f}</div>")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CASO B: CALCULAR YTM
@@ -193,7 +205,12 @@ else:
     col_res1, col_res2 = st.columns([1, 1])
 
     with col_res1:
-        themed_info(f"<h3 style='margin:0; color:inherit;'>YTM Nominal Anual: {i_nom_res*100:.4f}%</h3>")
+        themed_info(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>YTM Nominal Anual</span>"
+            f"<span style='{css_valor}'>{i_nom_res*100:.4f}%</span>"
+            f"</div>"
+        )
         st.metric("Tasa Efectiva Periódica ($i_m$)", f"{i_periodo_res*100:.4f}%")
         
         # Estado del bono
@@ -218,7 +235,7 @@ else:
         st.latex(rf"\text{{YTM}} = i_m \times m")
         st.latex(rf"\text{{YTM}} = {i_periodo_res:.6f} \times {m_bono:g} = {i_nom_res:.6f}")
         
-        themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>\text{{YTM}} = {i_nom_res*100:.4f}\%</h4>")
+        themed_info(f"<div style='{css_paso}'>YTM = {i_nom_res*100:.4f}%</div>")
 
 
 # =============================================================================
@@ -290,7 +307,12 @@ if i_final is not None and p_final is not None:
         col_s1, col_s2 = st.columns([1, 1])
 
         with col_s1:
-            themed_warning(f"<h3 style='margin:0; color:inherit;'>Nuevo Precio: ${nuevo_precio:,.4f}</h3>")
+            themed_warning(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Nuevo Precio (<span style='{math_style}'>P'</span>)</span>"
+                f"<span style='{css_valor}'>${nuevo_precio:,.4f}</span>"
+                f"</div>"
+            )
             st.metric(
                 "Impacto Total (Variación)",
                 f"${variacion:+,.4f}",

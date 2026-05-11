@@ -27,6 +27,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="4. Tabla de Amortización (Pagos Fijos)",
     subtitulo="Calcula la cuota periódica o el monto del préstamo y genera la tabla completa"
@@ -179,7 +186,12 @@ if "Pago Fijo (R)  →  conozco el Préstamo (VP)" in modo:
     )
 
     with col_form:
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Pago Periódico Fijo (R): ${pago_R:,.2f}</h3>")
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Pago Periódico Fijo (<span style='{math_style}'>R</span>)</span>"
+            f"<span style='{css_valor}'>${pago_R:,.2f}</span>"
+            f"</div>"
+        )
         
         with paso_a_paso():
             st.latex(formula_amort)
@@ -197,7 +209,7 @@ if "Pago Fijo (R)  →  conozco el Préstamo (VP)" in modo:
                 st.latex(rf"R = {vp_neto:,.2f} \left[ \frac{{{tasa_periodo:.6f}}}{{1 - {v_n:.6f}}} \right]")
                 st.latex(rf"R = {vp_neto:,.2f} ({factor:.6f}) = {pago_R:.2f}")
                 
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>R = ${pago_R:,.2f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>R</span> = ${pago_R:,.2f}</div>")
 
     with col_res:
         st.metric("Total pagado al final", f"${pago_R * nm_am:,.2f}")
@@ -219,7 +231,12 @@ else:
     )
 
     with col_form:
-        themed_info(f"<h3 style='margin:0; color:inherit;'>Préstamo a Financiar (VP): ${vp_calc:,.2f}</h3>")
+        themed_info(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Préstamo a Financiar (<span style='{math_style}'>VP</span>)</span>"
+            f"<span style='{css_valor}'>${vp_calc:,.2f}</span>"
+            f"</div>"
+        )
         
         with paso_a_paso():
             st.latex(formula_amort)
@@ -237,7 +254,7 @@ else:
                 st.latex(rf"VP = {R_conocido:,.2f} \left[ \frac{{1 - {v_n:.6f}}}{{{tasa_periodo:.6f}}} \right]")
                 st.latex(rf"VP = {R_conocido:,.2f} ({factor_vp:.6f}) = {vp_calc:.2f}")
                 
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_calc:,.2f}</h4>")
+            themed_info(f"<div style='{css_paso}'><span style='{math_style}'>VP</span> = ${vp_calc:,.2f}</div>")
 
     with col_res:
         st.metric("Total pagado al final", f"${pago_R * nm_am:,.2f}")

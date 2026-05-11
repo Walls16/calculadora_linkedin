@@ -185,11 +185,6 @@ def portada():
         )
 
 
-# =============================================================================
-# NAVEGACIÓN AGRUPADA
-# Streamlit 1.36+ permite pasar un dict {sección: [st.Page(...)]}
-# para generar secciones colapsables en el sidebar automáticamente.
-# =============================================================================
 pg = st.navigation(
     {
         "Inicio": [

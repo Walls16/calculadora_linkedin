@@ -53,6 +53,18 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
+# Variante para columnas estrechas (CreditMetrics)
+css_contenedor_col = "display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; padding: 8px 0;"
+css_titulo_col = "font-size: 16px; opacity: 0.85; font-weight: 500; margin-bottom: 4px; text-align: center;"
+css_valor_col = "font-size: 24px; font-weight: bold; text-align: center;"
+
 page_header(
     titulo="9. Análisis de Riesgo",
     subtitulo="Portafolios de Acciones (VaR/CVaR) · CreditMetrics para Bonos Corporativos"
@@ -205,11 +217,26 @@ with tab_port:
         col_res1, col_res2, col_res3 = st.columns(3)
         
         with col_res1:
-            themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR Paramétrico: ${var_p:,.2f}</h4>")
+            themed_warning(
+                f"<div style='{css_contenedor_col}'>"
+                f"<span style='{css_titulo_col}'>VaR Paramétrico</span>"
+                f"<span style='{css_valor_col}'>${var_p:,.2f}</span>"
+                f"</div>"
+            )
         with col_res2:
-            themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR Monte Carlo: ${var_mc:,.2f}</h4>")
+            themed_warning(
+                f"<div style='{css_contenedor_col}'>"
+                f"<span style='{css_titulo_col}'>VaR Monte Carlo</span>"
+                f"<span style='{css_valor_col}'>${var_mc:,.2f}</span>"
+                f"</div>"
+            )
         with col_res3:
-            themed_error(f"<h4 style='margin:0; color:inherit;'>CVaR (Shortfall): ${cvar_mc:,.2f}</h4>")
+            themed_error(
+                f"<div style='{css_contenedor_col}'>"
+                f"<span style='{css_titulo_col}'>CVaR (Expected Shortfall)</span>"
+                f"<span style='{css_valor_col}'>${cvar_mc:,.2f}</span>"
+                f"</div>"
+            )
 
         with paso_a_paso():
             st.latex(r"VaR_{param} = V_0 \times \left(Z_{\alpha} \times \sigma_{anual} \times \sqrt{\frac{t}{252}} - \mu_{anual} \times \frac{t}{252}\right)")
@@ -219,9 +246,13 @@ with tab_port:
             factor_vol = z_score * vol_p * np.sqrt(t_frac)
             factor_ret = rend_p * t_frac
             st.latex(rf"VaR_{{param}} = {capital:,.2f} ({factor_vol:.6f} - {factor_ret:.6f}) = {var_p:,.2f}")
+            
+            themed_warning(f"<div style='{css_paso}'><span style='{math_style}'>VaR<sub>param</sub></span> = ${var_p:,.2f}</div>")
+            
             st.write("---")
             st.latex(r"CVaR_{MC} = \mathbb{E}[L \mid L > VaR]")
-            st.latex(rf"CVaR_{{MC}} = {cvar_mc:,.2f}")
+            
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>CVaR<sub>MC</sub></span> = ${cvar_mc:,.2f}</div>")
 
         separador()
 
@@ -438,12 +469,6 @@ with tab_cm:
         )
         st.plotly_chart(fig_hm, use_container_width=True)
 
-        with paso_a_paso():
-            if nr_mode == "raw_no_d_nr":
-                st.latex(r"\text{Suma de fila no controlada (sin normalizar)}")
-            else:
-                st.latex(r"P_{i,j}^{adj} = \frac{P_{i,j}}{\sum_{k=1}^{N} P_{i,k}}")
-                st.latex(rf"\sum P_{{AAA}} = {np.sum(_tm_plot[0]):.6f}")
 
     # ── HELPERS: curva de tasas automática ───────────────────────────────────
     _DEFAULT_SPREADS_FLAT = DEFAULT_SPREADS[:17, 0] - DEFAULT_TREASURY[0]
@@ -557,28 +582,80 @@ with tab_cm:
 
         c_th = get_current_theme()
         fig_yc = go.Figure()
-        tsy_line = np.interp(
-            tenors_preview,
-            [0] + list(range(1, _max_T + 1)),
-            [0] + list(st.session_state["cm_tsy_anchors"])
-        )
+
+        _tsy_anchors = st.session_state["cm_tsy_anchors"]
+        _spr_flat    = st.session_state["cm_spreads_flat"]
+
+        # Tenores densos desde t=1 (primer punto real de datos) hasta max_T
+        _t_dense     = np.arange(1.0, _max_T + 0.01, 0.25)
+        _tsy_anchor_x = np.array(list(range(1, _max_T + 1)), dtype=float)
+        _tsy_dense    = np.interp(_t_dense, _tsy_anchor_x, _tsy_anchors[:_max_T])
+
+        # Línea de Tesoro (rf) — siempre visible
         fig_yc.add_trace(go.Scatter(
-            x=tenors_preview.tolist(), y=(tsy_line * 100).tolist(),
+            x=_t_dense.tolist(), y=(_tsy_dense * 100).tolist(),
             name="Tesoro (rf)", mode="lines+markers",
-            line=dict(color=c_th["primary"], width=3, dash="dash"),
+            line=dict(color=c_th["primary"], width=2.5, dash="dash"),
+            marker=dict(size=6),
         ))
-        for r_name, r_row in zip(RATINGS[:_n_spr_rows], allin_preview[:_n_spr_rows]):
-            if r_name in ["AAA", "AA", "A", "BBB", "BB", "B", "CCC/C"]:
-                fig_yc.add_trace(go.Scatter(
-                    x=tenors_preview.tolist(), y=(r_row * 100).tolist(),
-                    name=r_name, mode="lines", opacity=0.8,
-                ))
+
+        # Ratings únicos de los bonos del portafolio
+        _bond_ps_cur = st.session_state.get("cm_bparams", [])
+        _selected_ratings = []
+        for _bp in _bond_ps_cur:
+            if _bp["rating"] not in _selected_ratings:
+                _selected_ratings.append(_bp["rating"])
+        if not _selected_ratings:
+            _selected_ratings = ["AA", "A", "BBB", "BB", "B", "CCC/C"]
+
+        for _r_name in _selected_ratings:
+            if _r_name not in list(RATINGS[:_n_spr_rows]):
+                continue
+            _r_idx = list(RATINGS[:_n_spr_rows]).index(_r_name)
+            _spr   = _spr_flat[_r_idx]
+            _ai_anchor_y = np.array([_tsy_anchors[y] + _spr for y in range(_max_T)])
+            _ai_dense    = np.interp(_t_dense, _tsy_anchor_x, _ai_anchor_y)
+            _bond_label  = next(
+                (b["nombre"] for b in _bond_ps_cur if b["rating"] == _r_name),
+                _r_name,
+            )
+            fig_yc.add_trace(go.Scatter(
+                x=_t_dense.tolist(), y=(_ai_dense * 100).tolist(),
+                name=f"{_bond_label} ({_r_name})" if _bond_label != _r_name else _r_name,
+                mode="lines+markers",
+                line=dict(width=2.5),
+                marker=dict(size=5),
+                opacity=0.9,
+            ))
+
         fig_yc.update_layout(
-            title="Curvas de rendimiento All-In por calificación",
+            title="Curvas de rendimiento All-In — Bonos seleccionados",
             xaxis_title="Plazo (años)", yaxis_title="Tasa all-in (%)",
-            height=400, **plotly_theme(),
+            height=420, **plotly_theme(),
         )
-        st.plotly_chart(fig_yc, use_container_width=True)
+        fig_yc.update_xaxes(range=[1, _max_T], dtick=1)
+
+        # Layout de dos columnas: gráfica | tabla de bonos
+        _col_chart, _col_table = st.columns([3, 2])
+        with _col_chart:
+            st.plotly_chart(fig_yc, use_container_width=True)
+            themed_info(
+                "<b>Concavidad:</b> Las curvas se aplanan hacia el largo plazo — "
+                "el mercado exige mayor compensación relativa en plazos cortos ante "
+                "la incertidumbre de migración crediticia inmediata."
+            )
+        with _col_table:
+            st.markdown("##### Bonos en el portafolio")
+            if _bond_ps_cur:
+                _df_bonos = pd.DataFrame([{
+                    "Emisora":    b["nombre"],
+                    "Rating":     b["rating"],
+                    "Spread (%)": f"{_spr_flat[list(RATINGS[:_n_spr_rows]).index(b['rating'])] * 100:.4f}%" if b["rating"] in list(RATINGS[:_n_spr_rows]) else "—",
+                    "All-In t=1": f"{(_tsy_anchors[0] + (_spr_flat[list(RATINGS[:_n_spr_rows]).index(b['rating'])] if b['rating'] in list(RATINGS[:_n_spr_rows]) else 0)) * 100:.4f}%",
+                } for b in _bond_ps_cur])
+                st.dataframe(_df_bonos, hide_index=True, use_container_width=True)
+            else:
+                st.caption("Carga bonos en la pestaña 'Bonos del Portafolio'.")
 
     # ── HELPER: datos de bonos con valores calculados ─────────────────────────
     def _get_bond_data():
@@ -682,10 +759,34 @@ with tab_cm:
 
             r99p = sc_p[0.99]
             col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-            with col_p1: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 1d (99%):<br>${r99p['VaR_1d']:,.2f}</h4>")
-            with col_p2: themed_warning(f"<h4 style='margin:0; color:inherit;'>CVaR 1d (99%):<br>${r99p['CVaR_1d']:,.2f}</h4>")
-            with col_p3: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 10d (99%):<br>${r99p['VaR_10d']:,.2f}</h4>")
-            with col_p4: themed_error(f"<h4 style='margin:0; color:inherit;'>Capital Basilea:<br>${r99p['Capital']:,.2f}</h4>")
+            with col_p1:
+                themed_warning(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>VaR 1d (99%)</span>"
+                    f"<span style='{css_valor_col}'>${r99p['VaR_1d']:,.2f}</span>"
+                    f"</div>"
+                )
+            with col_p2:
+                themed_warning(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>CVaR 1d (99%)</span>"
+                    f"<span style='{css_valor_col}'>${r99p['CVaR_1d']:,.2f}</span>"
+                    f"</div>"
+                )
+            with col_p3:
+                themed_warning(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>VaR 10d (99%)</span>"
+                    f"<span style='{css_valor_col}'>${r99p['VaR_10d']:,.2f}</span>"
+                    f"</div>"
+                )
+            with col_p4:
+                themed_error(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>Capital Basilea</span>"
+                    f"<span style='{css_valor_col}'>${r99p['Capital']:,.2f}</span>"
+                    f"</div>"
+                )
 
             with paso_a_paso():
                 st.latex(r"E[V]_{port} = \sum_{i=1}^n \sum_{j=1}^{K} p_{i,j} \times V_{i,j}")
@@ -892,10 +993,34 @@ with tab_cm:
 
             r99c = sc5[0.99]
             col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-            with col_c1: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 1d (99%):<br>${r99c['VaR_1d']:,.2f}</h4>")
-            with col_c2: themed_warning(f"<h4 style='margin:0; color:inherit;'>CVaR 1d (99%):<br>${r99c['CVaR_1d']:,.2f}</h4>")
-            with col_c3: themed_warning(f"<h4 style='margin:0; color:inherit;'>VaR 10d (99%):<br>${r99c['VaR_10d']:,.2f}</h4>")
-            with col_c4: themed_error(f"<h4 style='margin:0; color:inherit;'>Capital Basilea:<br>${r99c['Capital']:,.2f}</h4>")
+            with col_c1:
+                themed_warning(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>VaR 1d (99%)</span>"
+                    f"<span style='{css_valor_col}'>${r99c['VaR_1d']:,.2f}</span>"
+                    f"</div>"
+                )
+            with col_c2:
+                themed_warning(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>CVaR 1d (99%)</span>"
+                    f"<span style='{css_valor_col}'>${r99c['CVaR_1d']:,.2f}</span>"
+                    f"</div>"
+                )
+            with col_c3:
+                themed_warning(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>VaR 10d (99%)</span>"
+                    f"<span style='{css_valor_col}'>${r99c['VaR_10d']:,.2f}</span>"
+                    f"</div>"
+                )
+            with col_c4:
+                themed_error(
+                    f"<div style='{css_contenedor_col}'>"
+                    f"<span style='{css_titulo_col}'>Capital Basilea</span>"
+                    f"<span style='{css_valor_col}'>${r99c['Capital']:,.2f}</span>"
+                    f"</div>"
+                )
             separador()
 
             if "cm_iscaled_param" in st.session_state:

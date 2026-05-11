@@ -25,6 +25,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="10. Contratos Forward",
     subtitulo="Precio teórico · Valuación en vida · Divisas (PTCI) · FRA"
@@ -174,7 +181,12 @@ with tab_precio:
 
     with c2:
         if F0_res is not None:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Precio Forward Teórico (F₀): ${F0_res:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Precio Forward Teórico (<span style='{math_style}'>F<sub>0</sub></span>)</span>"
+                f"<span style='{css_valor}'>${F0_res:,.4f}</span>"
+                f"</div>"
+            )
             st.latex(formula)
 
             separador()
@@ -252,7 +264,7 @@ with tab_precio:
                         st.latex(rf"F_0 = ({S0_fwd + C_v:.6f}) (1 + {r_fwd:.4f})^{{{T_fwd:.4f}}}")
                         st.latex(rf"F_0 = ({S0_fwd + C_v:.6f}) ({(1+r_fwd)**T_fwd:.6f})")
 
-                themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>F_0 = {F0_res:,.4f}</h4>")
+                themed_success(f"<div style='{css_paso}'><span style='{math_style}'>F<sub>0</sub></span> = ${F0_res:,.4f}</div>")
 
             # ── Resumen arbitraje ──────────────────────────────────────────────
             separador()
@@ -314,7 +326,12 @@ with tab_valor:
     with c2:
         ft_res = engine.valor_forward_en_vida(St_val, F0_val, r_calc_val, q_calc_val, tau_val)
 
-        themed_info(f"<h3 style='margin:0; color:inherit;'>Valor del Forward (f_t): ${ft_res:,.4f}</h3>")
+        themed_info(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Valor del Forward (<span style='{math_style}'>f<sub>t</sub></span>)</span>"
+            f"<span style='{css_valor}'>${ft_res:,.4f}</span>"
+            f"</div>"
+        )
         
         if ft_res > 0:
             themed_success(f"La posición **LARGA (long)** gana: ${abs(ft_res):,.4f}")
@@ -340,7 +357,7 @@ with tab_valor:
             st.latex(rf"f_t = {St_val:,.2f} ({(1+q_val)**(-tau_val):.6f}) - {F0_val:,.2f} ({(1+r_val)**(-tau_val):.6f})")
         
         st.latex(rf"f_t = {disc_S:.6f} - {disc_F0:.6f}")
-        themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>f_t = {ft_res:,.4f}</h4>")
+        themed_info(f"<div style='{css_paso}'><span style='{math_style}'>f<sub>t</sub></span> = ${ft_res:,.4f}</div>")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -389,7 +406,12 @@ with tab_divisa:
 
         prima_pct   = (F0_fx / S0_fx - 1) * 100
 
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Tipo de Cambio Forward (F₀): {F0_fx:,.4f}</h3>")
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Tipo de Cambio Forward (<span style='{math_style}'>F<sub>0</sub></span>)</span>"
+            f"<span style='{css_valor}'>{F0_fx:,.4f}</span>"
+            f"</div>"
+        )
         
         st.metric("Prima / Descuento Forward vs Spot",
                   f"{prima_pct:+.2f}%",
@@ -411,7 +433,7 @@ with tab_divisa:
             st.latex(rf"F_0 = {S0_fx:.4f} \left[ \frac{{{1+r_d:.4f}}}{{{1+r_f_fx:.4f}}} \right]^{{{T_fx:.4f}}}")
             st.latex(rf"F_0 = {S0_fx:.4f} ( {((1+r_d)/(1+r_f_fx))**T_fx:.6f} )")
 
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>F_0 = {F0_fx:.4f}</h4>")
+        themed_success(f"<div style='{css_paso}'><span style='{math_style}'>F<sub>0</sub></span> = {F0_fx:.4f}</div>")
 
     separador()
     with st.expander("Fundamento Económico de la PTCI"):
@@ -484,16 +506,36 @@ with tab_fra:
             # Reconvertir al formato de visualización si es discreta
             R_F_disp = R_F_cont if es_cont_fra else (np.exp(R_F_cont) - 1)
 
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Tasa Forward Implícita (R_F): {R_F_disp*100:.4f}%</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Tasa Forward Implícita (<span style='{math_style}'>R<sub>F</sub></span>)</span>"
+                f"<span style='{css_valor}'>{R_F_disp*100:.4f}%</span>"
+                f"</div>"
+            )
             
             if val_fra > 0:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>Valor FRA (Largo): ${val_fra:,.2f}</h3>")
+                themed_success(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Valor FRA (Largo)</span>"
+                    f"<span style='{css_valor}'>${val_fra:,.2f}</span>"
+                    f"</div>"
+                )
                 st.caption("Ganancia para el receptor de tasa fija")
             elif val_fra < 0:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>Valor FRA (Largo): ${val_fra:,.2f}</h3>")
+                themed_error(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Valor FRA (Largo)</span>"
+                    f"<span style='{css_valor}'>${val_fra:,.2f}</span>"
+                    f"</div>"
+                )
                 st.caption("Pérdida para el receptor de tasa fija")
             else:
-                themed_warning(f"<h3 style='margin:0; color:inherit;'>Valor FRA (Largo): ${val_fra:,.2f}</h3>")
+                themed_warning(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Valor FRA (Largo)</span>"
+                    f"<span style='{css_valor}'>${val_fra:,.2f}</span>"
+                    f"</div>"
+                )
                 st.caption("El contrato está a la par")
 
             formula_rf = r"R_F = \frac{r_2 t_2 - r_1 t_1}{t_2 - t_1}" if es_cont_fra else r"R_F = \left[ \frac{(1+r_2)^{t_2}}{(1+r_1)^{t_1}} \right]^{\frac{1}{t_2 - t_1}} - 1"
@@ -527,4 +569,4 @@ with tab_fra:
                 st.latex(rf"V_{{FRA}} = {Nf_fra:,.0f} ({diff_R:.6f}) ({tau_fra:.4f}) ({factor:.6f})")
 
             st.latex(rf"V_{{FRA}} = {val_fra:,.2f}")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>V_{{FRA}} = ${val_fra:,.2f}</h4>")
+            themed_info(f"<div style='{css_paso}'><span style='{math_style}'>V<sub>FRA</sub></span> = ${val_fra:,.2f}</div>")

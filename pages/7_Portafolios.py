@@ -32,6 +32,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="7. Teoría de Portafolios (Frontera Eficiente)",
     subtitulo="Optimización matemática exacta · pypfopt · Datos reales de Yahoo Finance"
@@ -219,7 +226,7 @@ if "datos_portafolio" in st.session_state:
 
     # ── TAB 2: PESOS ──────────────────────────────────────────────────────────
     with tab_pesos:
-        st.markdown("#### Comparativa de Asignación de Capital (<span style='font-family: serif; font-style: italic;'>w<sub>i</sub></span>)", unsafe_allow_html=True)
+        st.markdown(f"#### Comparativa de Asignación de Capital", unsafe_allow_html=True)
         themed_success(
             "La **Asignación de Capital** muestra el porcentaje exacto de tu dinero que debes "
             "destinar a cada acción para replicar la estrategia seleccionada (ya sea buscar la máxima eficiencia con Sharpe "
@@ -335,12 +342,22 @@ if "datos_portafolio" in st.session_state:
                 })
             return pd.DataFrame(filas).set_index("Horizonte")
 
-        themed_success(f"<h4 style='margin:0; color:inherit;'>Portafolio Máximo Sharpe (Rendimiento Anual: {rend_s*100:.2f}%)</h4>")
+        themed_success(
+            f"<div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 4px 0;'>"
+            f"<span style='font-size: 18px; font-weight: bold;'>Portafolio Máximo Sharpe</span>"
+            f"<span style='font-size: 18px;'>Rendimiento Anual: {rend_s*100:.2f}%</span>"
+            f"</div>"
+        )
         st.dataframe(_tabla_var(rend_s, vol_s, val_port, confianza), use_container_width=True)
 
         st.write("") # Espaciador
 
-        themed_info(f"<h4 style='margin:0; color:inherit;'>Portafolio Mínima Varianza Global (Rendimiento Anual: {rend_m*100:.2f}%)</h4>")
+        themed_info(
+            f"<div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 4px 0;'>"
+            f"<span style='font-size: 18px; font-weight: bold;'>Portafolio Mínima Varianza Global</span>"
+            f"<span style='font-size: 18px;'>Rendimiento Anual: {rend_m*100:.2f}%</span>"
+            f"</div>"
+        )
         st.dataframe(_tabla_var(rend_m, vol_m, val_port, confianza), use_container_width=True)
 
         separador()

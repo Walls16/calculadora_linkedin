@@ -43,6 +43,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="8. Valuación Corporativa",
     subtitulo="DCF · WACC · CAPM"
@@ -168,7 +175,12 @@ with tab_dcf:
         col_r3.metric("Valor Empresa (EV)",       f"${v_empresa:,.1f}M")
         col_r4.metric("Valor del Capital (Equity)",   f"${v_capital:,.1f}M")
 
-        themed_success(f"<h2 style='margin:0; color:inherit; text-align:center;'>Precio Teórico por Acción: ${precio_acc:,.2f}</h2>")
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Precio Teórico por Acción (<span style='{math_style}'>P<sub>0</sub></span>)</span>"
+            f"<span style='{css_valor}'>${precio_acc:,.2f}</span>"
+            f"</div>"
+        )
 
         with paso_a_paso():
             st.latex(r"WACC = K_e \left(\frac{E}{V}\right) + K_d (1-T) \left(\frac{D}{V}\right)")
@@ -186,6 +198,7 @@ with tab_dcf:
             st.write("---")
             st.latex(r"P_0 = \frac{\text{Equity}}{\text{Acciones en circulación}}")
             st.latex(rf"P_0 = \frac{{{v_capital:,.2f}}}{{{acciones:,.2f}}} = {precio_acc:,.2f}")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>P<sub>0</sub></span> = ${precio_acc:,.2f}</div>")
 
         separador()
 
@@ -369,7 +382,12 @@ with tab_capm:
             res = st.session_state["capm_result"]
             c_th = get_current_theme()
 
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Rendimiento Requerido (Ke): {res['ke']*100:.2f}%</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Rendimiento Requerido (<span style='{math_style}'>K<sub>e</sub></span>)</span>"
+                f"<span style='{css_valor}'>{res['ke']*100:.2f}%</span>"
+                f"</div>"
+            )
             
             with paso_a_paso():
                 st.latex(r"K_e = r_f + \beta (E[R_m] - r_f)")
@@ -379,6 +397,13 @@ with tab_capm:
                 st.write("---")
                 st.latex(r"\text{Alpha de Jensen } (\alpha) = R_{real} - K_e")
                 st.latex(rf"\alpha = {res['ret_a']:.6f} - {res['ke']:.6f} = {res['ret_a']-res['ke']:.6f}")
+                
+                themed_success(
+                    f"<div style='{css_paso}'>"
+                    f"<span style='{math_style}'>K<sub>e</sub></span> = {res['ke']*100:.2f}% &nbsp;|&nbsp; "
+                    f"<span style='{math_style}'>&alpha;</span> = {(res['ret_a']-res['ke'])*100:.2f}%"
+                    f"</div>"
+                )
 
             separador()
 

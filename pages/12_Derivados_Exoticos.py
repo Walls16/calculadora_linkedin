@@ -35,6 +35,18 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
+# Variante para métricas secundarias
+css_contenedor_sm = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 6px 0;"
+css_titulo_sm = "font-size: 16px; opacity: 0.85; font-weight: 500;"
+css_valor_sm = "font-size: 22px; font-weight: bold;"
+
 page_header(
     titulo="12. Derivados Exóticos",
     subtitulo="Gap · Binarias · Barrera · Asiáticas · Lookback · Compuestas · Intercambio"
@@ -219,9 +231,19 @@ with tab_gap:
         tipo_txt  = "Call" if es_call_g else "Put"
 
         if es_call_g:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Gap {tipo_txt}: ${prima_gap:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Gap {tipo_txt} (<span style='{math_style}'>c<sub>gap</sub></span>)</span>"
+                f"<span style='{css_valor}'>${prima_gap:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>Gap {tipo_txt}: ${prima_gap:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Gap {tipo_txt} (<span style='{math_style}'>p<sub>gap</sub></span>)</span>"
+                f"<span style='{css_valor}'>${prima_gap:,.4f}</span>"
+                f"</div>"
+            )
 
         st.latex(
             r"c_{gap} = S_0 e^{-qT} N(d_1) - K_2 e^{-rT} N(d_2)"
@@ -246,7 +268,7 @@ with tab_gap:
             t2 = K2_g*np.exp(-r_g*T_g)*_norm.cdf(d2_g)
             st.latex(rf"c_{{gap}} = {S_g*np.exp(-q_g*T_g):.4f}({_norm.cdf(d1_g):.6f}) - {K2_g*np.exp(-r_g*T_g):.4f}({_norm.cdf(d2_g):.6f})")
             st.latex(rf"c_{{gap}} = {t1:.4f} - {t2:.4f}")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>c_{{gap}} = {prima_gap:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>c<sub>gap</sub></span> = ${prima_gap:,.4f}</div>")
         else:
             st.latex(r"p_{gap} = K_2 e^{-rT} N(-d_2) - S_0 e^{-qT} N(-d_1)")
             st.latex(rf"p_{{gap}} = {K2_g:.2f} e^{{-{r_g:.4f}({T_g:.4f})}} N({-d2_g:.6f}) - {S_g:.2f} e^{{-{q_g:.4f}({T_g:.4f})}} N({-d1_g:.6f})")
@@ -254,7 +276,7 @@ with tab_gap:
             t2 = S_g*np.exp(-q_g*T_g)*_norm.cdf(-d1_g)
             st.latex(rf"p_{{gap}} = {K2_g*np.exp(-r_g*T_g):.4f}({_norm.cdf(-d2_g):.6f}) - {S_g*np.exp(-q_g*T_g):.4f}({_norm.cdf(-d1_g):.6f})")
             st.latex(rf"p_{{gap}} = {t1:.4f} - {t2:.4f}")
-            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>p_{{gap}} = {prima_gap:,.4f}</h4>")
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>p<sub>gap</sub></span> = ${prima_gap:,.4f}</div>")
 
     # ── Perfil de Pago al Vencimiento ────────────────────────────────────────
     separador()
@@ -330,15 +352,27 @@ with tab_bin:
             prima_bin = engine.opciones_cash_or_nothing(S_b, K_b, Q_b, T_b, r_b, sig_b, q_b, tipo_b)
             lbl = "Cash-or-Nothing Call" if es_call_b else "Cash-or-Nothing Put"
             formula_b = r"c_{CoN} = Q e^{-rT} N(d_2)" if es_call_b else r"p_{CoN} = Q e^{-rT} N(-d_2)"
+            var_b = "c_{CoN}" if es_call_b else "p_{CoN}"
         else:
             prima_bin = engine.opciones_asset_or_nothing(S_b, K_b, T_b, r_b, sig_b, q_b, tipo_b)
             lbl = "Asset-or-Nothing Call" if es_call_b else "Asset-or-Nothing Put"
             formula_b = r"c_{AoN} = S_0 e^{-qT} N(d_1)" if es_call_b else r"p_{AoN} = S_0 e^{-qT} N(-d_1)"
+            var_b = "c_{AoN}" if es_call_b else "p_{AoN}"
 
         if es_call_b:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>{lbl}: ${prima_bin:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl}</span>"
+                f"<span style='{css_valor}'>${prima_bin:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>{lbl}: ${prima_bin:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl}</span>"
+                f"<span style='{css_valor}'>${prima_bin:,.4f}</span>"
+                f"</div>"
+            )
 
         st.latex(formula_b)
 
@@ -366,9 +400,9 @@ with tab_bin:
             st.latex(rf"\text{{Prima}} = {fac:.4f} \times {_norm.cdf(d1_b if es_call_b else -d1_b):.6f}")
             
         if es_call_b:
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_bin:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>{var_b}</span> = ${prima_bin:,.4f}</div>")
         else:
-            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_bin:,.4f}</h4>")
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>{var_b}</span> = ${prima_bin:,.4f}</div>")
 
     # ── Perfil de Pago al Vencimiento ────────────────────────────────────────
     separador()
@@ -442,9 +476,19 @@ with tab_bar:
             lbl_bar = f"Down-and-In {'Call' if es_call_ba else 'Put'}"
 
         if es_call_ba:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>{lbl_bar}: ${prima_bar:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl_bar}</span>"
+                f"<span style='{css_valor}'>${prima_bar:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>{lbl_bar}: ${prima_bar:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl_bar}</span>"
+                f"<span style='{css_valor}'>${prima_bar:,.4f}</span>"
+                f"</div>"
+            )
 
         separador()
         col_ba1, col_ba2, col_ba3 = st.columns(3)
@@ -461,10 +505,12 @@ with tab_bar:
         st.latex(r"c_{KI} = c_{vanilla} - c_{KO}")
         st.latex(rf"c_{{KO}} = {prima_ko:.6f}")
         st.latex(rf"c_{{KI}} = {prima_vanilla:.6f} - {prima_ko:.6f} = {prima_ki:.6f}")
+        
+        var_bar = "c_{KO}" if es_out else "c_{KI}"
         if es_call_ba:
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_bar:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>{var_bar}</span> = ${prima_bar:,.4f}</div>")
         else:
-            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_bar:,.4f}</h4>")
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>{var_bar}</span> = ${prima_bar:,.4f}</div>")
 
     # ── Perfil de Pago al Vencimiento ────────────────────────────────────────
     separador()
@@ -545,21 +591,26 @@ with tab_asi:
                 S_as, K_as, T_as, r_as, sig_as, q_as, tipo_as
             )
             lbl_as = "Asiatica Geometrica Call" if es_call_as else "Asiatica Geometrica Put"
-            
-            if es_call_as:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>{lbl_as}: ${prima_asi:,.4f}</h3>")
-            else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>{lbl_as}: ${prima_asi:,.4f}</h3>")
-
         else:
             prima_asi = engine.opciones_asiaticas_aritmeticas(
                 S_as, K_as, T_as, r_as, sig_as, q_as, tipo_as
             )
             lbl_as = "Asiatica Aritmetica Call" if es_call_as else "Asiatica Aritmetica Put"
-            if es_call_as:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>{lbl_as}: ${prima_asi:,.4f}</h3>")
-            else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>{lbl_as}: ${prima_asi:,.4f}</h3>")
+            
+        if es_call_as:
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl_as}</span>"
+                f"<span style='{css_valor}'>${prima_asi:,.4f}</span>"
+                f"</div>"
+            )
+        else:
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl_as}</span>"
+                f"<span style='{css_valor}'>${prima_asi:,.4f}</span>"
+                f"</div>"
+            )
 
         # Comparativa con vanilla
         prima_van_as = engine.black_scholes(S_as, K_as, r_as, sig_as, T_as, es_call_as, q_as)
@@ -605,10 +656,11 @@ with tab_asi:
             st.write("---")
             st.latex(rf"\text{{Prima}} = \text{{BSM}}(S_0^*={M1:.4f}, K={K_as:.2f}, \sigma^*={sig_tw:.6f}) = {prima_asi:.4f}")
             
+        var_asi = "c_{asi}" if es_call_as else "p_{asi}"
         if es_call_as:
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_asi:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>{var_asi}</span> = ${prima_asi:,.4f}</div>")
         else:
-            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_asi:,.4f}</h4>")
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>{var_asi}</span> = ${prima_asi:,.4f}</div>")
 
     # ── Perfil de Pago al Vencimiento ────────────────────────────────────────
     separador()
@@ -680,9 +732,19 @@ with tab_look:
         lbl_lk = "Lookback Call (Mínimo Flotante)" if es_call_lk else "Lookback Put (Máximo Flotante)"
 
         if es_call_lk:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>{lbl_lk}: ${prima_lk:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl_lk}</span>"
+                f"<span style='{css_valor}'>${prima_lk:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>{lbl_lk}: ${prima_lk:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>{lbl_lk}</span>"
+                f"<span style='{css_valor}'>${prima_lk:,.4f}</span>"
+                f"</div>"
+            )
 
         prima_van_lk = engine.black_scholes(S_lk, S_min_max, r_lk, sig_lk, T_lk,
                                              es_call_lk, q_lk)
@@ -698,8 +760,7 @@ with tab_look:
             st.latex(rf"a_3 = \frac{{\ln(S_0/S_{{min}}) - (r-q-\sigma^2/2)T}}{{\sigma\sqrt{{T}}}} = {a3:.6f}")
             st.write("---")
             st.latex(r"c_{LB} = S_0 e^{-qT} N(a_1) - S_{min} e^{-rT} N(a_2) + S_0 e^{-rT} \frac{\sigma^2}{2(r-q)} \left[ \left(\frac{S_0}{S_{min}}\right)^{-\frac{2(r-q)}{\sigma^2}} N(-a_3) - e^{qT} N(-a_1) \right]")
-            st.latex(rf"c_{{LB}} = {prima_lk:.4f}")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>c_{{LB}} = ${prima_lk:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>c<sub>LB</sub></span> = ${prima_lk:,.4f}</div>")
         else:
             a1 = (np.log(S_min_max/S_lk) + (-r_lk + q_lk + sig_lk**2/2)*T_lk) / (sig_lk*np.sqrt(T_lk))
             a2 = a1 - sig_lk*np.sqrt(T_lk)
@@ -709,8 +770,7 @@ with tab_look:
             st.latex(rf"a_3 = \frac{{\ln(S_{{max}}/S_0) + (r-q+\sigma^2/2)T}}{{\sigma\sqrt{{T}}}} = {a3:.6f}")
             st.write("---")
             st.latex(r"p_{LB} = S_{max} e^{-rT} N(a_1) - S_0 e^{-qT} N(a_2) + S_0 e^{-rT} \frac{\sigma^2}{2(r-q)} \left[ e^{qT} N(a_1) - \left(\frac{S_0}{S_{max}}\right)^{\frac{2(r-q)}{\sigma^2}} N(a_3) \right]")
-            st.latex(rf"p_{{LB}} = {prima_lk:.4f}")
-            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>p_{{LB}} = ${prima_lk:,.4f}</h4>")
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>p<sub>LB</sub></span> = ${prima_lk:,.4f}</div>")
 
     # ── Perfil de Pago al Vencimiento ────────────────────────────────────────
     separador()
@@ -822,9 +882,19 @@ with tab_comp:
                 S_cp2, K_out, K_in, T_out, T_in, r_cp2, sig_cp2, q_cp2, tipo_comp_str
             )
             if es_call_outer:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>{subtipo_comp}: ${prima_comp:,.4f}</h3>")
+                themed_success(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>{subtipo_comp}</span>"
+                    f"<span style='{css_valor}'>${prima_comp:,.4f}</span>"
+                    f"</div>"
+                )
             else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>{subtipo_comp}: ${prima_comp:,.4f}</h3>")
+                themed_error(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>{subtipo_comp}</span>"
+                    f"<span style='{css_valor}'>${prima_comp:,.4f}</span>"
+                    f"</div>"
+                )
 
             prima_inner = engine.black_scholes(S_cp2, K_in, r_cp2, sig_cp2, T_in,
                                                 es_call_inner, q_cp2)
@@ -842,6 +912,7 @@ with tab_comp:
         st.latex(r"b_{1,2} = \frac{\ln(S_0/K_{in}) + (r-q \pm \sigma^2/2)T_2}{\sigma\sqrt{T_2}}")
         st.write("---")
         
+        var_comp = "c_{cc}" if es_call_outer and es_call_inner else "c_{cp}" if es_call_outer else "p_{cc}" if es_call_inner else "p_{cp}"
         if es_call_outer and es_call_inner:
             st.latex(r"c_{cc} = S_0 e^{-qT_2} M(a_1, b_1; \rho) - K_{in} e^{-rT_2} M(a_2, b_2; \rho) - K_{out} e^{-rT_1} N(a_2)")
         elif es_call_outer and not es_call_inner:
@@ -852,9 +923,9 @@ with tab_comp:
             st.latex(r"p_{cp} = K_{out} e^{-rT_1} N(a_2) - K_{in} e^{-rT_2} M(a_2, -b_2; -\rho) + S_0 e^{-qT_2} M(a_1, -b_1; -\rho)")
             
         if es_call_outer:
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_comp:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>{var_comp}</span> = ${prima_comp:,.4f}</div>")
         else:
-            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_comp:,.4f}</h4>")
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>{var_comp}</span> = ${prima_comp:,.4f}</div>")
 
     # ── Perfil de Pago al Vencimiento ────────────────────────────────────────
     separador()
@@ -937,7 +1008,12 @@ with tab_int:
         else:
             prima_int = 0.0
 
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Intercambio (Recibir S2, Entregar S1): ${prima_int:,.4f}</h3>")
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Intercambio (Recibir S2, Entregar S1)</span>"
+            f"<span style='{css_valor}'>${prima_int:,.4f}</span>"
+            f"</div>"
+        )
         c1r, c2r, c3r = st.columns(3)
         c1r.metric("Vector Efectivo U (n1 * S1)", f"${U_eff:,.4f}")
         c2r.metric("Vector Efectivo V (n2 * S2)", f"${V_eff:,.4f}")
@@ -954,7 +1030,7 @@ with tab_int:
         st.latex(r"c = V e^{-q_2 T} N(d_1) - U e^{-q_1 T} N(d_2)")
         st.latex(rf"c = {V_eff:.2f} e^{{-{q2_int:.4f}({T_int:.4f})}} N({d1_int:.4f}) - {U_eff:.2f} e^{{-{q1_int:.4f}({T_int:.4f})}} N({d2_int:.4f})")
         st.latex(rf"c = {prima_int:.4f}")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${prima_int:,.4f}</h4>")
+        themed_success(f"<div style='{css_paso}'><span style='{math_style}'>c</span> = ${prima_int:,.4f}</div>")
 
     # ── Perfil de Pago al Vencimiento ────────────────────────────────────────
     separador()
@@ -1280,9 +1356,9 @@ with tab_est_ex:
 # Valúa los 7 tipos de exóticos con datos reales de mercado
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_real:
-    st.markdown("### Valuación Exótica sobre Activos Reales")
+    st.markdown("### Valuación Exótica sobre Subyacente")
     themed_info(
-        "Extrae el precio spot y la volatilidad histórica de activos en vivo mediante Yahoo Finance para "
+        "Extrae el precio spot y la volatilidad histórica de subyacentes en vivo mediante Yahoo Finance para "
         "revaluar dinámicamente cualquier estructura de derivado exótico empleando parámetros empíricos reales."
     )
     separador()
@@ -1349,9 +1425,19 @@ with tab_real:
         ticker_lbl   = st.session_state.get("ex_ticker_ok", "ACTIVO")
         st.markdown(f"**Referencia — {ticker_lbl} Vanilla BSM**")
         if es_call_ex:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Vanilla Call: ${prima_van_ex:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor_sm}'>"
+                f"<span style='{css_titulo_sm}'>Vanilla Call</span>"
+                f"<span style='{css_valor_sm}'>${prima_van_ex:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>Vanilla Put: ${prima_van_ex:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor_sm}'>"
+                f"<span style='{css_titulo_sm}'>Vanilla Put</span>"
+                f"<span style='{css_valor_sm}'>${prima_van_ex:,.4f}</span>"
+                f"</div>"
+            )
             
         moneyness_ex = ((S_ex - K_ex) / K_ex) * 100
         if (moneyness_ex > 1 and es_call_ex) or (moneyness_ex < -1 and not es_call_ex):
@@ -1394,9 +1480,19 @@ with tab_real:
         with col_g2:
             prima_gap_ex = engine.opciones_gap(S_ex, K2_ex, K1_ex, T_ex, r_ex, sig_ex, q_ex, tipo_str_ex)
             if es_call_ex:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>Gap Call: ${prima_gap_ex:,.4f}</h3>")
+                themed_success(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Gap Call</span>"
+                    f"<span style='{css_valor}'>${prima_gap_ex:,.4f}</span>"
+                    f"</div>"
+                )
             else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>Gap Put: ${prima_gap_ex:,.4f}</h3>")
+                themed_error(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Gap Put</span>"
+                    f"<span style='{css_valor}'>${prima_gap_ex:,.4f}</span>"
+                    f"</div>"
+                )
         with paso_a_paso():
             d1_g = (np.log(S_ex/K1_ex) + (r_ex - q_ex + sig_ex**2/2)*T_ex) / (sig_ex*np.sqrt(T_ex))
             d2_g = d1_g - sig_ex*np.sqrt(T_ex)
@@ -1415,9 +1511,19 @@ with tab_real:
         with col_c2:
             prima_bin_ex = engine.opciones_cash_or_nothing(S_ex, K_ex, Q_ex, T_ex, r_ex, sig_ex, q_ex, tipo_str_ex)
             if es_call_ex:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>Cash-o-N Call: ${prima_bin_ex:,.4f}</h3>")
+                themed_success(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Cash-o-N Call</span>"
+                    f"<span style='{css_valor}'>${prima_bin_ex:,.4f}</span>"
+                    f"</div>"
+                )
             else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>Cash-o-N Put: ${prima_bin_ex:,.4f}</h3>")
+                themed_error(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Cash-o-N Put</span>"
+                    f"<span style='{css_valor}'>${prima_bin_ex:,.4f}</span>"
+                    f"</div>"
+                )
         with paso_a_paso():
             d2_b = (np.log(S_ex/K_ex) + (r_ex - q_ex - sig_ex**2/2)*T_ex) / (sig_ex*np.sqrt(T_ex))
             st.latex(rf"d_2 = {d2_b:.6f}")
@@ -1430,9 +1536,19 @@ with tab_real:
     elif tipo_exotico.startswith("Binaria Asset"):
         prima_aon_ex = engine.opciones_asset_or_nothing(S_ex, K_ex, T_ex, r_ex, sig_ex, q_ex, tipo_str_ex)
         if es_call_ex:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Asset-o-N Call: ${prima_aon_ex:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Asset-o-N Call</span>"
+                f"<span style='{css_valor}'>${prima_aon_ex:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>Asset-o-N Put: ${prima_aon_ex:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Asset-o-N Put</span>"
+                f"<span style='{css_valor}'>${prima_aon_ex:,.4f}</span>"
+                f"</div>"
+            )
         with paso_a_paso():
             d1_b = (np.log(S_ex/K_ex) + (r_ex - q_ex + sig_ex**2/2)*T_ex) / (sig_ex*np.sqrt(T_ex))
             st.latex(rf"d_1 = {d1_b:.6f}")
@@ -1454,9 +1570,19 @@ with tab_real:
             prima_bar_ex = prima_ko_ex if es_out else prima_ki_ex
             
             if es_call_ex:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>{tipo_bar_ex} Call: ${prima_bar_ex:,.4f}</h3>")
+                themed_success(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>{tipo_bar_ex} Call</span>"
+                    f"<span style='{css_valor}'>${prima_bar_ex:,.4f}</span>"
+                    f"</div>"
+                )
             else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>{tipo_bar_ex} Put: ${prima_bar_ex:,.4f}</h3>")
+                themed_error(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>{tipo_bar_ex} Put</span>"
+                    f"<span style='{css_valor}'>${prima_bar_ex:,.4f}</span>"
+                    f"</div>"
+                )
                 
             st.metric("Descuento vs Vanilla", f"{(1 - prima_bar_ex / prima_van_ex) * 100:.1f}%")
         with paso_a_paso():
@@ -1469,9 +1595,19 @@ with tab_real:
     elif tipo_exotico.startswith("Asiática Geométrica"):
         prima_asi_g = engine.opciones_asiaticas_geometricas(S_ex, K_ex, T_ex, r_ex, sig_ex, q_ex, tipo_str_ex)
         if es_call_ex:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Asiática Geo Call: ${prima_asi_g:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Asiática Geo Call</span>"
+                f"<span style='{css_valor}'>${prima_asi_g:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>Asiática Geo Put: ${prima_asi_g:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Asiática Geo Put</span>"
+                f"<span style='{css_valor}'>${prima_asi_g:,.4f}</span>"
+                f"</div>"
+            )
         with paso_a_paso():
             sig_star = sig_ex / np.sqrt(3)
             b_star   = 0.5 * (r_ex - q_ex - sig_ex**2/6)
@@ -1483,9 +1619,19 @@ with tab_real:
     elif tipo_exotico.startswith("Asiática Aritmética"):
         prima_asi_a = engine.opciones_asiaticas_aritmeticas(S_ex, K_ex, T_ex, r_ex, sig_ex, q_ex, tipo_str_ex)
         if es_call_ex:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Asiática Aritm Call: ${prima_asi_a:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Asiática Aritm Call</span>"
+                f"<span style='{css_valor}'>${prima_asi_a:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>Asiática Aritm Put: ${prima_asi_a:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Asiática Aritm Put</span>"
+                f"<span style='{css_valor}'>${prima_asi_a:,.4f}</span>"
+                f"</div>"
+            )
         with paso_a_paso():
             b_tw = r_ex - q_ex
             if abs(b_tw) < 1e-6:
@@ -1507,9 +1653,19 @@ with tab_real:
                                    value=round(S_ex * 0.95, 2) if es_call_ex else round(S_ex * 1.05, 2), key="ex_Sext")
         prima_lk_ex = engine.opciones_lookback_flotante(S_ex, S_ext_ex, T_ex, r_ex, sig_ex, q_ex, tipo_str_ex)
         if es_call_ex:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Lookback Call: ${prima_lk_ex:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Lookback Call</span>"
+                f"<span style='{css_valor}'>${prima_lk_ex:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>Lookback Put: ${prima_lk_ex:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Lookback Put</span>"
+                f"<span style='{css_valor}'>${prima_lk_ex:,.4f}</span>"
+                f"</div>"
+            )
         with paso_a_paso():
             if es_call_ex:
                 a1 = (np.log(S_ex/S_ext_ex) + (r_ex - q_ex + sig_ex**2/2)*T_ex) / (sig_ex*np.sqrt(T_ex))
@@ -1536,9 +1692,19 @@ with tab_real:
         with col_cp2:
             prima_comp_ex = engine.opciones_compuestas(S_ex, K_out_ex, K_ex, T_out_ex, T_in_ex, r_ex, sig_ex, q_ex, tipo_comp_str_ex)
             if es_call_outer_ex:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>Compuesta ({subtipo_comp_ex}): ${prima_comp_ex:,.4f}</h3>")
+                themed_success(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Compuesta ({subtipo_comp_ex})</span>"
+                    f"<span style='{css_valor}'>${prima_comp_ex:,.4f}</span>"
+                    f"</div>"
+                )
             else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>Compuesta ({subtipo_comp_ex}): ${prima_comp_ex:,.4f}</h3>")
+                themed_error(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Compuesta ({subtipo_comp_ex})</span>"
+                    f"<span style='{css_valor}'>${prima_comp_ex:,.4f}</span>"
+                    f"</div>"
+                )
         with paso_a_paso():
             st.latex(rf"\rho = \sqrt{{\frac{{{T_out_ex:.4f}}}{{{T_in_ex:.4f}}}}} = {np.sqrt(T_out_ex/T_in_ex):.6f}")
             st.latex(rf"\text{{Prima}} = {prima_comp_ex:.4f}")
@@ -1623,7 +1789,12 @@ with tab_real:
             else:
                 prima_int_ex = 0.0
 
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Intercambio (Recibir S2, Entregar S1): ${prima_int_ex:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Intercambio (Recibir S2, Entregar S1)</span>"
+                f"<span style='{css_valor}'>${prima_int_ex:,.4f}</span>"
+                f"</div>"
+            )
             c1r, c2r, c3r = st.columns(3)
             c1r.metric("Vector U (n1 × S1)", f"${U_eff:,.4f}")
             c2r.metric("Vector V (n2 × S2)", f"${V_eff:,.4f}")

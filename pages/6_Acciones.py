@@ -22,6 +22,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="6. Valuación de Acciones",
     subtitulo="Modelo de Gordon-Shapiro · Rendimiento requerido · Valuación relativa por múltiplos"
@@ -70,7 +77,13 @@ with tab_gordon:
             )
         else:
             precio_gs = engine.valuacion_gordon_shapiro(d1_gs, k_gs, g_gs)
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Precio Teórico (P₀): ${precio_gs:,.4f}</h3>")
+            
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Precio Teórico (<span style='{math_style}'>P<sub>0</sub></span>)</span>"
+                f"<span style='{css_valor}'>${precio_gs:,.4f}</span>"
+                f"</div>"
+            )
             st.latex(r"P_0 = \frac{D_1}{k - g}")
 
             separador()
@@ -79,7 +92,7 @@ with tab_gordon:
                 st.latex(r"P_0 = \frac{D_1}{k - g}")
                 st.latex(rf"P_0 = \frac{{{d1_gs:,.2f}}}{{{k_gs:.4f} - {g_gs:.4f}}}")
                 st.latex(rf"P_0 = \frac{{{d1_gs:,.2f}}}{{{k_gs - g_gs:.4f}}}")
-                themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>P_0 = ${precio_gs:,.4f}</h4>")
+                themed_success(f"<div style='{css_paso}'><span style='{math_style}'>P<sub>0</sub></span> = ${precio_gs:,.4f}</div>")
 
             # ── Interpretación automática ──────────────────────────────────
             separador()
@@ -124,7 +137,13 @@ with tab_rendimiento:
 
     with c2:
         k_calc = engine.rendimiento_requerido_accion(d1_rr, p0_rr, g_rr)
-        themed_info(f"<h3 style='margin:0; color:inherit;'>Rendimiento Requerido (k): {k_calc*100:.4f}%</h3>")
+        
+        themed_info(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Rendimiento Requerido (<span style='{math_style}'>k</span>)</span>"
+            f"<span style='{css_valor}'>{k_calc*100:.4f}%</span>"
+            f"</div>"
+        )
         st.latex(r"k = \frac{D_1}{P_0} + g")
 
         separador()
@@ -134,7 +153,7 @@ with tab_rendimiento:
             st.latex(r"k = \frac{D_1}{P_0} + g")
             st.latex(rf"k = \frac{{{d1_rr:,.2f}}}{{{p0_rr:,.2f}}} + {g_rr:.4f}")
             st.latex(rf"k = {div_yield:.6f} + {g_rr:.4f}")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>k = {k_calc*100:.4f}\%</h4>")
+            themed_info(f"<div style='{css_paso}'><span style='{math_style}'>k</span> = {k_calc*100:.4f}%</div>")
 
         separador()
 
@@ -236,12 +255,23 @@ with tab_multiplos:
         resultado_mul = engine.valuacion_multiplos(val_metrica, val_multiplo)
 
         titulo_res = (
-            "Valor de la Empresa (EV)"
+            f"Valor de la Empresa (<span style='{math_style}'>EV</span>)"
             if cfg["es_ev"]
-            else "Precio Estimado (P₀)"
+            else f"Precio Estimado (<span style='{math_style}'>P<sub>0</sub></span>)"
         )
         
-        themed_success(f"<h3 style='margin:0; color:inherit;'>{titulo_res}: ${resultado_mul:,.4f}</h3>")
+        var_display = (
+            f"<span style='{math_style}'>EV</span>"
+            if cfg["es_ev"]
+            else f"<span style='{math_style}'>P<sub>0</sub></span>"
+        )
+        
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>{titulo_res}</span>"
+            f"<span style='{css_valor}'>${resultado_mul:,.4f}</span>"
+            f"</div>"
+        )
         st.latex(cfg["formula"])
 
         separador()
@@ -249,20 +279,5 @@ with tab_multiplos:
         with paso_a_paso():
             st.latex(cfg["formula"])
             st.latex(rf"{cfg['var_nombre']} = {val_metrica:,.2f} \times {val_multiplo:,.2f}")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>{cfg['var_nombre']} = ${resultado_mul:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'>{var_display} = ${resultado_mul:,.4f}</div>")
 
-    # ── Tabla comparativa de múltiplos ────────────────────────────────────────
-    separador()
-    with st.expander("Referencia: Rangos típicos de múltiplos por sector"):
-        st.markdown("""
-| Sector            | P/E típico | P/S típico | EV/EBITDA típico | P/B típico |
-| :---------------- | :--------: | :--------: | :--------------: | :--------: |
-| Tecnología        | 25 – 50x   | 5 – 15x    | 20 – 40x         | 5 – 15x    |
-| Banca / Finanzas  | 10 – 15x   | 2 – 4x     | 8 – 12x          | 1 – 2x     |
-| Consumo básico    | 15 – 25x   | 1 – 3x     | 10 – 16x         | 3 – 6x     |
-| Energía           | 8 – 15x    | 0.5 – 2x   | 5 – 10x          | 1 – 2x     |
-| Salud             | 20 – 35x   | 3 – 8x     | 12 – 20x         | 3 – 7x     |
-| Industrial        | 15 – 25x   | 1 – 3x     | 8 – 14x          | 2 – 4x     |
-
->  *Estos rangos son orientativos y cambian constantemente. Siempre es necesario comparar contra el promedio específico del sector al momento de evaluar.*
-        """)

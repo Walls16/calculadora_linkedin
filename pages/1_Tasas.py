@@ -28,6 +28,13 @@ st.set_page_config(
 # Instancia cacheada del motor
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 # Encabezado estándar
 page_header(
     titulo="1. Conversión de Tasas de Interés",
@@ -107,24 +114,35 @@ with tabs[1]:
         i_eff = engine.tasa_nominal_a_efectiva(j, m)
         delta = engine.tasa_nominal_a_instantanea(j, m)
         
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Tasa Efectiva Anual (i): {i_eff*100:.4f}%</h3>")
-        themed_info(f"<h3 style='margin:0; color:inherit;'>Tasa Instantánea (δ): {delta*100:.4f}%</h3>")
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Tasa Efectiva Anual (<span style='{math_style}'>i</span>)</span>"
+            f"<span style='{css_valor}'>{i_eff*100:.4f}%</span>"
+            f"</div>"
+        )
+
+        themed_info(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Tasa Instantánea (<span style='{math_style}'>δ</span>)</span>"
+            f"<span style='{css_valor}'>{delta*100:.4f}%</span>"
+            f"</div>"
+        )
 
     separador()
 
     with paso_a_paso():
-        st.latex(r"i = \left(1 + \frac{i^{(m)}}{m}\right)^m - 1")
-        st.latex(rf"i = \left(1 + \frac{{{j:.4f}}}{{{m:g}}}\right)^{{{m:g}}} - 1")
-        st.latex(rf"i = (1 + {j/m:.6f})^{{{m:g}}} - 1 = {i_eff:.6f}")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>i = {i_eff*100:.4f}\%</h4>")
+            st.latex(r"i = \left(1 + \frac{i^{(m)}}{m}\right)^m - 1")
+            st.latex(rf"i = \left(1 + \frac{{{j:.4f}}}{{{m:g}}}\right)^{{{m:g}}} - 1")
+            st.latex(rf"i = (1 + {j/m:.6f})^{{{m:g}}} - 1 = {i_eff:.6f}")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>i</span> = {i_eff*100:.4f}%</div>")
 
-        st.write("---")
-        
-        st.latex(r"\delta = m \ln\left(1 + \frac{i^{(m)}}{m}\right)")
-        st.latex(rf"\delta = {m:g} \ln\left(1 + \frac{{{j:.4f}}}{{{m:g}}}\right)")
-        st.latex(rf"\delta = {m:g} \times \ln(1 + {j/m:.6f})")
-        st.latex(rf"\delta = {m:g} \times {np.log(1+j/m):.6f} = {delta:.6f}")
-        themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>\delta = {delta*100:.4f}\%</h4>")
+            st.write("---")
+            
+            st.latex(r"\delta = m \ln\left(1 + \frac{i^{(m)}}{m}\right)")
+            st.latex(rf"\delta = {m:g} \ln\left(1 + \frac{{{j:.4f}}}{{{m:g}}}\right)")
+            st.latex(rf"\delta = {m:g} \times \ln(1 + {j/m:.6f})")
+            st.latex(rf"\delta = {m:g} \times {np.log(1+j/m):.6f} = {delta:.6f}")
+            themed_info(f"<div style='{css_paso}'><span style='{math_style}'>δ</span> = {delta*100:.4f}%</div>")
 
 # ─────────────────────────────────────────────
 # TAB 2: Instantánea → Efectiva
@@ -144,15 +162,21 @@ with tabs[2]:
 
     with c2:
         i2 = engine.tasa_instantanea_a_efectiva(d2)
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Tasa Efectiva Anual (i): {i2*100:.4f}%</h3>")
+        
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Tasa Efectiva Anual (<span style='{math_style}'>i</span>)</span>"
+            f"<span style='{css_valor}'>{i2*100:.4f}%</span>"
+            f"</div>"
+        )
 
     separador()
 
     with paso_a_paso():
-        st.latex(r"1 + i = e^\delta \quad \Rightarrow \quad i = e^\delta - 1")
-        st.latex(rf"i = e^{{{d2:.4f}}} - 1")
-        st.latex(rf"i = {np.exp(d2):.6f} - 1 = {i2:.6f}")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>i = {i2*100:.4f}\%</h4>")
+            st.latex(r"1 + i = e^\delta \quad \Rightarrow \quad i = e^\delta - 1")
+            st.latex(rf"i = e^{{{d2:.4f}}} - 1")
+            st.latex(rf"i = {np.exp(d2):.6f} - 1 = {i2:.6f}")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>i</span> = {i2*100:.4f}%</div>")
 
 # ─────────────────────────────────────────────
 # TAB 3: Instantánea → Nominal
@@ -174,7 +198,13 @@ with tabs[3]:
 
     with c2:
         i3 = engine.tasa_instantanea_a_nominal(d3, m3)
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Tasa Nominal i^({m3:g}): {i3*100:.4f}%</h3>")
+        
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Tasa Nominal (<span style='{math_style}'>i<sup>({m3:g})</sup></span>)</span>"
+            f"<span style='{css_valor}'>{i3*100:.4f}%</span>"
+            f"</div>"
+        )
 
     separador()
 
@@ -184,7 +214,7 @@ with tabs[3]:
         st.latex(rf"i^{{({m3:g})}} = {m3:g} \left(e^{{\frac{{{d3:.4f}}}{{{m3:g}}}}} - 1\right)")
         st.latex(rf"i^{{({m3:g})}} = {m3:g} \left(e^{{{d3/m3:.6f}}} - 1\right)")
         st.latex(rf"i^{{({m3:g})}} = {m3:g} ({np.exp(d3/m3):.6f} - 1) = {i3:.6f}")
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>i^{{({m3:g})}} = {i3*100:.4f}\%</h4>")
+        themed_success(f"<div style='{css_paso}'><span style='{math_style}'>i<sup>({m3:g})</sup></span> = {i3*100:.4f}%</div>")
 
 # ─────────────────────────────────────────────
 # TAB 4: Nominal i(m) → Nominal i(p)
@@ -207,7 +237,13 @@ with tabs[4]:
 
     with c2:
         i_p = engine.tasa_nominal_m_a_nominal_p(i_orig, m_orig, p_dest)
-        themed_success(f"<h3 style='margin:0; color:inherit;'>Tasa Nominal i^({p_dest:g}): {i_p*100:.4f}%</h3>")
+        
+        themed_success(
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Tasa Nominal (<span style='{math_style}'>i<sup>({p_dest:g})</sup></span>)</span>"
+            f"<span style='{css_valor}'>{i_p*100:.4f}%</span>"
+            f"</div>"
+        )
 
     separador()
 
@@ -222,7 +258,7 @@ with tabs[4]:
         st.latex(rf"i^{{({p_dest:g})}} = {p_dest:g} \left[ (1 + {tasa_per_orig:.6f})^{{{frac_mp:.4f}}} - 1 \right]")
         st.latex(rf"i^{{({p_dest:g})}} = {p_dest:g} ({((1+tasa_per_orig)**frac_mp):.6f} - 1) = {i_p:.6f}")
         
-        themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>i^{{({p_dest:g})}} = {i_p*100:.4f}\%</h4>")
+        themed_success(f"<div style='{css_paso}'><span style='{math_style}'>i<sup>({p_dest:g})</sup></span> = {i_p*100:.4f}%</div>")
 
 # ─────────────────────────────────────────────
 # TAB 5: Reinversión

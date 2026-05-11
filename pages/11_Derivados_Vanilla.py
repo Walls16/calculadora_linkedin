@@ -31,6 +31,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="11. Valuación de Derivados Vanilla",
     subtitulo="Árbol Binomial CRR · Black-Scholes-Merton · Griegas"
@@ -115,9 +122,19 @@ with tab_crr:
     col_r1, col_r2, col_r3, col_r4 = st.columns(4)
     with col_r1:
         if es_call_crr:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_op_crr}: ${precio_crr:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Prima {tipo_op_crr} (<span style='{math_style}'>c</span>)</span>"
+                f"<span style='{css_valor}'>${precio_crr:,.4f}</span>"
+                f"</div>"
+            )
         else:
-            themed_error(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_op_crr}: ${precio_crr:,.4f}</h3>")
+            themed_error(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Prima {tipo_op_crr} (<span style='{math_style}'>p</span>)</span>"
+                f"<span style='{css_valor}'>${precio_crr:,.4f}</span>"
+                f"</div>"
+            )
     col_r2.metric("Factor sube ($u$)",           f"{u_crr:.6f}")
     col_r3.metric("Factor baja ($d$)",           f"{d_crr:.6f}")
     col_r4.metric("Prob. neutral al riesgo ($p$)", f"{p_crr:.4f}")
@@ -143,9 +160,9 @@ with tab_crr:
         st.latex(rf"p = \frac{{{a_crr:.6f} - {d_crr:.6f}}}{{{u_crr:.6f} - {d_crr:.6f}}} = \frac{{{a_crr - d_crr:.6f}}}{{{u_crr - d_crr:.6f}}} = {p_crr:.6f}")
         
         if es_call_crr:
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${precio_crr:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>c</span> = ${precio_crr:,.4f}</div>")
         else:
-            themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima = ${precio_crr:,.4f}</h4>")
+            themed_error(f"<div style='{css_paso}'><span style='{math_style}'>p</span> = ${precio_crr:,.4f}</div>")
 
     # ── Árbol visual (solo si N ≤ 10) ─────────────────────────────────────────
     separador()
@@ -427,9 +444,19 @@ with tab_bsm:
     with c2:
         if prima_bsm is not None:
             if es_call_bsm:
-                themed_success(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_bsm}: ${prima_bsm:,.4f}</h3>")
+                themed_success(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Prima {tipo_bsm} (<span style='{math_style}'>c</span>)</span>"
+                    f"<span style='{css_valor}'>${prima_bsm:,.4f}</span>"
+                    f"</div>"
+                )
             else:
-                themed_error(f"<h3 style='margin:0; color:inherit;'>Prima {tipo_bsm}: ${prima_bsm:,.4f}</h3>")
+                themed_error(
+                    f"<div style='{css_contenedor}'>"
+                    f"<span style='{css_titulo}'>Prima {tipo_bsm} (<span style='{math_style}'>p</span>)</span>"
+                    f"<span style='{css_valor}'>${prima_bsm:,.4f}</span>"
+                    f"</div>"
+                )
 
             st.latex(formula_c if es_call_bsm else formula_p)
             st.latex(formula_d)
@@ -557,9 +584,9 @@ with tab_bsm:
                     st.latex(rf"p = {t2*nNd2:.6f} - {t1*nNd1:.6f} = {prima_bsm:.4f}")
 
             if es_call_bsm:
-                themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+                themed_success(f"<div style='{css_paso}'><span style='{math_style}'>c</span> = ${prima_bsm:,.4f}</div>")
             else:
-                themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+                themed_error(f"<div style='{css_paso}'><span style='{math_style}'>p</span> = ${prima_bsm:,.4f}</div>")
             
     elif variante_bsm == "Opción Perpetua (T → ∞)":
         with paso_a_paso():
@@ -574,7 +601,7 @@ with tab_bsm:
                 st.latex(formula_c)
                 st.latex(rf"C^* = \frac{{{K_bsm:.2f}}}{{{h_val:.6f}-1}}\left(\frac{{({h_val:.6f}-1){S_bsm:.2f}}}{{{h_val:.6f}({K_bsm:.2f})}}\right)^{{{h_val:.6f}}}")
                 st.latex(rf"C^* = {K_bsm/(h_val-1):.6f} \left({(h_val-1)*S_bsm / (h_val*K_bsm):.6f}\right)^{{{h_val:.6f}}} = {prima_bsm:.4f}")
-                themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+                themed_success(f"<div style='{css_paso}'><span style='{math_style}'>C<sup>*</sup></span> = ${prima_bsm:,.4f}</div>")
             else:
                 st.latex(r"h^* = \frac{1}{2} - \sqrt{\frac{1}{4} + \frac{2r}{\sigma^2}}")
                 h_star = 0.5 - np.sqrt(0.25 + 2*r_bsm/(sig_bsm**2))
@@ -582,72 +609,770 @@ with tab_bsm:
                 st.latex(formula_p)
                 st.latex(rf"P^* = \frac{{{K_bsm:.2f}}}{{1 - ({h_star:.6f})}}\left(\frac{{(1 - ({h_star:.6f})){S_bsm:.2f}}}{{{h_star:.6f}({K_bsm:.2f})}}\right)^{{{h_star:.6f}}}")
                 st.latex(rf"P^* = {prima_bsm:.4f}")
-                themed_error(f"<h4 style='margin:0; color:inherit; text-align:center;'>Prima {tipo_bsm} = ${prima_bsm:,.4f}</h4>")
+                themed_error(f"<div style='{css_paso}'><span style='{math_style}'>P<sup>*</sup></span> = ${prima_bsm:,.4f}</div>")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 3 — GRIEGAS
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_griegas:
-    st.markdown("### Letras Griegas (Sensibilidades de BSM)")
+    st.markdown("### Letras Griegas (Sensibilidades de Black-Scholes-Merton)")
     themed_info(
-        "Las **Letras Griegas** son las derivadas matemáticas de la fórmula de Black-Scholes. "
-        "Cuantifican exactamente la sensibilidad (el cambio en el precio de la prima) ante variaciones "
-        "en los factores clave del mercado: precio spot, tiempo al vencimiento, volatilidad y tasas de interés."
+        "Las **Letras Griegas** son las derivadas parciales de la fórmula de Black-Scholes. "
+        "Cuantifican la sensibilidad de la prima ante cambios en los factores de mercado. "
+        "Ajusta los parámetros para ver cómo se transforman las curvas en tiempo real."
     )
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-        st.markdown("**Parámetros de mercado**")
-        S_gr   = st.number_input("Precio Spot ($S_0$)", min_value=0.01,
-                                  value=100.0, step=1.0, key="gr_S")
-        K_gr   = st.number_input("Strike ($K$)", min_value=0.01,
-                                  value=100.0, step=1.0, key="gr_K")
-        r_gr   = st.number_input("Tasa libre de riesgo ($r$) %",
-                                  value=5.0, step=0.1, key="gr_r") / 100
-        sig_gr = st.number_input("Volatilidad ($\\sigma$) %",
-                                  min_value=0.01, value=20.0,
-                                  step=0.5, key="gr_sig") / 100
-        T_gr   = st.number_input("Tiempo al vencimiento ($T$) años",
-                                  min_value=0.001, value=1.0,
-                                  step=0.25, key="gr_T")
-        q_gr   = st.number_input("Dividendo continuo ($q$) %",
-                                  value=0.0, step=0.1, key="gr_q") / 100
-        tipo_gr = st.radio("Tipo:", ["Call", "Put"],
-                            horizontal=True, key="gr_tipo")
+ 
+    # =========================================================================
+    # PARÁMETROS DE ENTRADA  (compartidos por todas las secciones del tab)
+    # =========================================================================
+    c_in1, c_in2, c_in3 = st.columns(3)
+ 
+    with c_in1:
+        st.markdown("**Subyacente y Contrato**")
+        S_gr  = st.number_input("Precio Spot ($S_0$)",        min_value=0.01, value=100.0, step=1.0,  key="gr_S")
+        K_gr  = st.number_input("Strike ($K$)",               min_value=0.01, value=100.0, step=1.0,  key="gr_K")
+        q_gr  = st.number_input("Dividendo continuo ($q$) %", value=0.0,      step=0.1,               key="gr_q") / 100
+ 
+    with c_in2:
+        st.markdown("**Parámetros de Mercado**")
+        r_gr   = st.number_input("Tasa libre de riesgo ($r$) %",     value=5.0,  step=0.1,               key="gr_r")   / 100
+        sig_gr = st.number_input("Volatilidad ($\\sigma$) %",         min_value=0.01, value=20.0, step=0.5, key="gr_sig") / 100
+        T_gr   = st.number_input("Tiempo al vencimiento ($T$) años",  min_value=0.001, value=1.0, step=0.25, key="gr_T")
+ 
+    with c_in3:
+        st.markdown("**Tipo de Opción**")
+        tipo_gr    = st.radio("Opción:", ["Call", "Put"], horizontal=True, key="gr_tipo")
         es_call_gr = (tipo_gr == "Call")
-
-    with c2:
+ 
         griegas = engine.calcular_griegas(S_gr, K_gr, r_gr, sig_gr, T_gr, es_call_gr, q_gr)
-
-        delta_g = griegas["delta"]
-        gamma_g = griegas["gamma"]
-        theta_g = griegas["theta"]
-        vega_g  = griegas["vega"]
-        rho_g   = griegas["rho"]
-
-        st.metric("Δ Delta",  f"{delta_g:+.6f}",
-                  help="Variación del precio de la opción ante un aumento de $1 en el subyacente.")
-        st.metric("Γ Gamma",  f"{gamma_g:.6f}",
-                  help="Variación del Delta ante un aumento de $1 en el subyacente. Es idéntica para Call y Put.")
-        st.metric("Θ Theta",  f"{theta_g:+.6f} $/día",
-                  help="Pérdida de valor de la opción por cada día natural que pasa (Time Decay).")
-        st.metric("𝒱 Vega",   f"{vega_g:.6f} $/1%σ",
-                  help="Variación del precio de la opción ante un aumento de 1% absoluto en la volatilidad.")
-        st.metric("ρ Rho",    f"{rho_g:+.6f} $/1%r",
-                  help="Variación del precio de la opción ante un aumento de 1% en la tasa libre de riesgo.")
-
+        st.markdown("**Valores puntuales en S₀**")
+        col_m1, col_m2 = st.columns(2)
+        col_m1.metric("Δ Delta",      f"{griegas['delta']:+.5f}", help="+$1 en subyacente → cambio en prima")
+        col_m2.metric("Γ Gamma",      f"{griegas['gamma']:.5f}",  help="Cambio en Delta ante +$1 en subyacente")
+        col_m1.metric("Θ Theta /día", f"{griegas['theta']:+.5f}", help="Pérdida de valor por cada día natural")
+        col_m2.metric("𝒱 Vega /1%σ", f"{griegas['vega']:.5f}",   help="Cambio ante +1% absoluto en volatilidad")
+        col_m1.metric("ρ Rho /1%r",   f"{griegas['rho']:+.5f}",   help="Cambio ante +1% en la tasa libre de riesgo")
+ 
     separador()
-
-    # ── Fórmulas de las griegas ───────────────────────────────────────────────
-    with st.expander("Fórmulas Matemáticas de las Griegas (Modelo con dividendo q)"):
-        st.latex(r"\Delta_{call} = e^{-qT} N(d_1), \quad \Delta_{put} = -e^{-qT} N(-d_1)")
-        st.latex(r"\Gamma = \frac{e^{-qT} n(d_1)}{S_0 \sigma \sqrt{T}}")
-        st.latex(r"\Theta_{call} = -\frac{S_0 n(d_1) \sigma e^{-qT}}{2\sqrt{T}} - rKe^{-rT}N(d_2) + qS_0e^{-qT}N(d_1)")
-        st.latex(r"\mathcal{V} = S_0 \sqrt{T} e^{-qT} n(d_1) \quad (\text{por 1\% absoluto de }\sigma)")
-        st.latex(r"\rho_{call} = KTe^{-rT}N(d_2), \quad \rho_{put} = -KTe^{-rT}N(-d_2)")
-
+ 
+    # =========================================================================
+    # UTILIDADES LOCALES
+    # =========================================================================
+    c = get_current_theme()
+ 
+    COL = dict(
+        delta  = c["primary"],
+        gamma  = c["success"],
+        theta  = c["danger"],
+        vega   = c["warning"],
+        rho    = c["accent"],
+        muted  = c["text_muted"],
+        vanna  = c["secondary"],
+        vomma  = "#8B5CF6",
+        charm  = "#06B6D4",
+        speed  = "#EC4899",
+        color_ = "#F59E0B",
+    )
+ 
+    spots = np.linspace(max(1.0, S_gr * 0.35), S_gr * 1.80, 300)
+ 
+    # ── Primer orden vs Spot ──────────────────────────────────────────────────
+    deltas, gammas, thetas, vegas, rhos = [], [], [], [], []
+    prices, payoffs = [], []
+ 
+    for s in spots:
+        g  = engine.calcular_griegas(s, K_gr, r_gr, sig_gr, T_gr, es_call_gr, q_gr)
+        pv = engine.black_scholes(s, K_gr, r_gr, sig_gr, T_gr, es_call_gr, q_gr)
+        deltas.append(g["delta"])
+        gammas.append(g["gamma"])
+        thetas.append(g["theta"])
+        vegas.append(g["vega"])
+        rhos.append(g["rho"])
+        prices.append(pv)
+        payoffs.append(max(s - K_gr, 0) if es_call_gr else max(K_gr - s, 0))
+ 
+    # ── Segundo orden vs Spot ─────────────────────────────────────────────────
+    def _d1d2(s, K, r, q, sig, T):
+        if T <= 0 or sig <= 0:
+            return 0.0, 0.0
+        d1 = (np.log(s / K) + (r - q + 0.5 * sig**2) * T) / (sig * np.sqrt(T))
+        return d1, d1 - sig * np.sqrt(T)
+ 
+    def _griegas_2ord(s, K, r, q, sig, T, is_call):
+        zero = dict(vanna=0, vomma=0, charm=0, speed=0, color_val=0)
+        if T <= 1e-6 or sig <= 1e-6:
+            return zero
+        d1, d2 = _d1d2(s, K, r, q, sig, T)
+        npd1  = norm.pdf(d1)
+        sqrtT = np.sqrt(T)
+        vanna     = -np.exp(-q * T) * npd1 * d2 / sig
+        vega_raw  = s * np.exp(-q * T) * npd1 * sqrtT
+        vomma     = vega_raw * d1 * d2 / sig * 0.01
+        if is_call:
+            charm = (q * np.exp(-q * T) * norm.cdf(d1)
+                     - np.exp(-q * T) * npd1
+                     * (2 * (r - q) * T - d2 * sig * sqrtT)
+                     / (2 * T * sig * sqrtT))
+        else:
+            charm = (-q * np.exp(-q * T) * norm.cdf(-d1)
+                     - np.exp(-q * T) * npd1
+                     * (2 * (r - q) * T - d2 * sig * sqrtT)
+                     / (2 * T * sig * sqrtT))
+        charm /= 365.0
+        gamma_pt  = np.exp(-q * T) * npd1 / (s * sig * sqrtT)
+        speed     = -gamma_pt / s * (d1 / (sig * sqrtT) + 1)
+        color_val = (-np.exp(-q * T) * npd1 / (2 * s * T * sig * sqrtT)
+                     * (2 * q * T + 1
+                        + (2 * (r - q) * T - d2 * sig * sqrtT)
+                        * d1 / (sig * sqrtT))) / 365.0
+        return dict(vanna=vanna, vomma=vomma, charm=charm, speed=speed, color_val=color_val)
+ 
+    vannas, vommas, charms, speeds, colors_arr = [], [], [], [], []
+    for s in spots:
+        g2 = _griegas_2ord(s, K_gr, r_gr, q_gr, sig_gr, T_gr, es_call_gr)
+        vannas.append(g2["vanna"])
+        vommas.append(g2["vomma"])
+        charms.append(g2["charm"])
+        speeds.append(g2["speed"])
+        colors_arr.append(g2["color_val"])
+ 
+    # ── Layout helpers ────────────────────────────────────────────────────────
+    def _vline(fig):
+        fig.add_vline(
+            x=S_gr, line_dash="dot", line_color=c["text_muted"], line_width=1.5,
+            annotation_text=f"S₀={S_gr:.0f}",
+            annotation_position="top right",
+            annotation_font=dict(color=c["text_muted"], size=10),
+        )
+        return fig
+ 
+    def _layout(fig, titulo, ytitle, height=310):
+        fig = apply_plotly_theme(fig)
+        fig.update_layout(
+            **plotly_theme(),
+            title=dict(text=titulo, font=dict(size=13)),
+            xaxis_title="Precio Spot S",
+            yaxis_title=ytitle,
+            height=height,
+            showlegend=True,
+            margin=dict(l=50, r=20, t=48, b=42),
+        )
+        return fig
+ 
+    def _norm(arr):
+        mx = max(abs(v) for v in arr) or 1.0
+        return [v / mx for v in arr]
+ 
+    _moneyness = {
+        f"OTM (S={S_gr*0.85:.0f})": S_gr * 0.85,
+        f"ATM (S={S_gr:.0f})":       S_gr,
+        f"ITM (S={S_gr*1.15:.0f})":  S_gr * 1.15,
+    }
+    _dash_styles = ["solid", "dash", "dot"]
+    _colors_mon  = [COL["delta"], COL["gamma"], COL["rho"]]
+ 
+    # =========================================================================
+    # SECCIÓN A1 — Griegas de Primer Orden vs Spot
+    # =========================================================================
+    st.markdown(
+        f"<p style='font-weight:700;color:{c['subtitle_color']};font-size:13px;"
+        f"text-transform:uppercase;letter-spacing:0.7px;margin:4px 0;'>"
+        f"Griegas de Primer Orden vs Spot</p>",
+        unsafe_allow_html=True,
+    )
+ 
+    col_d, col_g = st.columns(2)
+    with col_d:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=spots, y=deltas, mode="lines",
+            name=f"Δ {'Call' if es_call_gr else 'Put'}",
+            line=dict(color=COL["delta"], width=2.5)))
+        fig.add_hline(y=0.5 if es_call_gr else -0.5, line_dash="dash",
+                      line_color=c["text_muted"], line_width=1,
+                      annotation_text="ATM ≈ ±0.5",
+                      annotation_font=dict(size=10, color=c["text_muted"]))
+        _vline(fig)
+        fig = _layout(fig, "Δ Delta — Exposición direccional", "Delta Δ")
+        st.plotly_chart(fig, use_container_width=True)
+        themed_info(
+            "**Delta** mide cuánto se mueve la prima por cada $1 de cambio en el subyacente. "
+            "Una call ATM tiene Δ ≈ 0.5. También aproxima la probabilidad de terminar ITM "
+            "bajo la medida neutral al riesgo."
+        )
+ 
+    with col_g:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=spots, y=gammas, mode="lines",
+            name="Γ Gamma", line=dict(color=COL["gamma"], width=2.5)))
+        _vline(fig)
+        fig = _layout(fig, "Γ Gamma — Curvatura (idéntica para Call y Put)", "Gamma Γ")
+        st.plotly_chart(fig, use_container_width=True)
+        themed_info(
+            "**Gamma** es la derivada de Delta respecto al Spot: mide la convexidad. "
+            "Máximo ATM y explosivo cerca del vencimiento. "
+            "Gamma alto implica que el Delta cambia rápido → la cobertura requiere rebalanceo frecuente."
+        )
+ 
+    col_t, col_v = st.columns(2)
+    with col_t:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=spots, y=thetas, mode="lines",
+            name="Θ Theta/día", line=dict(color=COL["theta"], width=2.5)))
+        fig.add_hline(y=0, line_dash="dash", line_color=c["text_muted"], line_width=1)
+        _vline(fig)
+        fig = _layout(fig, "Θ Theta — Decaimiento temporal ($/día)", "Theta Θ ($/día)")
+        st.plotly_chart(fig, use_container_width=True)
+        themed_info(
+            "**Theta** cuantifica la pérdida de valor por cada día que pasa. "
+            "Generalmente negativo para el comprador. El decaimiento se acelera "
+            "exponencialmente conforme la opción ATM se acerca al vencimiento."
+        )
+ 
+    with col_v:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=spots, y=vegas, mode="lines",
+            name="𝒱 Vega/1%σ", line=dict(color=COL["vega"], width=2.5)))
+        _vline(fig)
+        fig = _layout(fig, "𝒱 Vega — Sensibilidad a la volatilidad ($/1%σ)", "Vega 𝒱 ($/1%σ)")
+        st.plotly_chart(fig, use_container_width=True)
+        themed_info(
+            "**Vega** mide el cambio en prima ante un aumento de 1% en σ implícita. "
+            "Siempre positivo e idéntico para calls y puts. "
+            "Máximo ATM con horizonte largo."
+        )
+ 
+    col_r, col_p = st.columns(2)
+    with col_r:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=spots, y=rhos, mode="lines",
+            name="ρ Rho/1%r", line=dict(color=COL["rho"], width=2.5)))
+        fig.add_hline(y=0, line_dash="dash", line_color=c["text_muted"], line_width=1)
+        _vline(fig)
+        fig = _layout(fig, "ρ Rho — Sensibilidad a la tasa ($/1%r)", "Rho ρ ($/1%r)")
+        st.plotly_chart(fig, use_container_width=True)
+        themed_info(
+            "**Rho** mide el cambio ante un aumento de 1% en la tasa libre de riesgo. "
+            "Calls: ρ positivo. Puts: ρ negativo. "
+            "Su efecto es pequeño en opciones de corto plazo."
+        )
+ 
+    with col_p:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=spots, y=payoffs, mode="lines",
+            name="Payoff al vencimiento",
+            line=dict(color=COL["muted"], width=1.5, dash="dot")))
+        fig.add_trace(go.Scatter(x=spots, y=prices, mode="lines",
+            name="Prima BSM",
+            line=dict(color=COL["delta"], width=2.5)))
+        _vline(fig)
+        fig = _layout(fig,
+            f"Prima BSM vs Payoff | {'Call' if es_call_gr else 'Put'} K={K_gr:.0f}",
+            "Precio ($)")
+        fig.update_layout(yaxis=dict(rangemode="tozero"))
+        st.plotly_chart(fig, use_container_width=True)
+        themed_info(
+            "La **prima BSM** (sólida) siempre supera al payoff (punteado): "
+            "la diferencia es el **valor temporal**. "
+            "Conforme T → 0 la prima converge al payoff intrínseco."
+        )
+ 
+    separador()
+ 
+    # =========================================================================
+    # SECCIÓN A2 — Superficie 3D: Spot × Tiempo → Prima / Delta / Gamma
+    # =========================================================================
+    st.markdown(
+        f"<p style='font-weight:700;color:{c['subtitle_color']};font-size:13px;"
+        f"text-transform:uppercase;letter-spacing:0.7px;margin:4px 0;'>"
+        f"Superficie de Precio: Spot × Tiempo → Prima</p>",
+        unsafe_allow_html=True,
+    )
+    themed_info(
+        "Esta superficie muestra cómo la prima BSM evoluciona simultáneamente con el Spot y "
+        "con el tiempo restante. El **colapso del valor temporal** (T → 0) se aprecia como el "
+        "hundimiento de la superficie hacia el payoff intrínseco en el plano frontal."
+    )
+ 
+    _T_surf = np.linspace(0.02, max(T_gr, 0.25), 35)
+    _S_surf = np.linspace(max(1.0, S_gr * 0.40), S_gr * 1.70, 50)
+    _Z_price = np.zeros((len(_T_surf), len(_S_surf)))
+    _Z_delta = np.zeros_like(_Z_price)
+    _Z_gamma = np.zeros_like(_Z_price)
+ 
+    for i, t in enumerate(_T_surf):
+        for j, s in enumerate(_S_surf):
+            _Z_price[i, j] = engine.black_scholes(s, K_gr, r_gr, sig_gr, t, es_call_gr, q_gr)
+            gij = engine.calcular_griegas(s, K_gr, r_gr, sig_gr, t, es_call_gr, q_gr)
+            _Z_delta[i, j] = gij["delta"]
+            _Z_gamma[i, j] = gij["gamma"]
+ 
+    tab_s3d_price, tab_s3d_delta, tab_s3d_gamma = st.tabs(
+        ["Superficie — Prima", "Superficie — Delta", "Superficie — Gamma"]
+    )
+ 
+    def _surf_fig(Z, title, ztitle, colorscale="Blues"):
+        fig3 = go.Figure(data=[go.Surface(
+            x=_S_surf, y=_T_surf, z=Z,
+            colorscale=colorscale,
+            colorbar=dict(
+                          title=dict(text=ztitle, font=dict(color=c["text_color"])),
+                          tickfont=dict(color=c["text_muted"]),
+                      ),
+            opacity=0.92,
+            contours=dict(z=dict(show=True, usecolormap=True,
+                                  highlightcolor="white", project_z=True)),
+        )])
+        poff = [max(s - K_gr, 0) if es_call_gr else max(K_gr - s, 0) for s in _S_surf]
+        fig3.add_trace(go.Scatter3d(
+            x=_S_surf, y=[_T_surf[0]] * len(_S_surf), z=poff,
+            mode="lines", name="Payoff (T≈0)",
+            line=dict(color=c["danger"], width=4),
+        ))
+        p_actual = engine.black_scholes(S_gr, K_gr, r_gr, sig_gr, T_gr, es_call_gr, q_gr)
+        fig3.add_scatter3d(
+            x=[S_gr], y=[T_gr], z=[p_actual],
+            mode="markers", name="Punto actual",
+            marker=dict(size=6, color=c["accent"], symbol="circle"),
+        )
+        fig3.update_layout(
+            title=dict(text=title, font=dict(color=c["subtitle_color"], size=13)),
+            scene=dict(
+                xaxis=dict(title="Spot S",   tickfont=dict(color=c["text_muted"]),
+                           gridcolor=c["border"], backgroundcolor=c["bg_light"]),
+                yaxis=dict(title="T (años)", tickfont=dict(color=c["text_muted"]),
+                           gridcolor=c["border"], backgroundcolor=c["bg_light"]),
+                zaxis=dict(title=ztitle,     tickfont=dict(color=c["text_muted"]),
+                           gridcolor=c["border"], backgroundcolor=c["bg_light"]),
+                bgcolor=c["bg_main"],
+            ),
+            paper_bgcolor=c["bg_main"],
+            font=dict(color=c["text_color"]),
+            height=480,
+            margin=dict(l=0, r=0, t=50, b=0),
+            legend=dict(bgcolor=c["bg_light"], font=dict(color=c["text_color"])),
+        )
+        return fig3
+ 
+    with tab_s3d_price:
+        st.plotly_chart(_surf_fig(_Z_price,
+            f"Prima BSM — {'Call' if es_call_gr else 'Put'} | K={K_gr:.0f} | σ={sig_gr*100:.0f}%",
+            "Prima ($)", "Blues"), use_container_width=True)
+        themed_info(
+            "La línea roja al frente (T ≈ 0) es el **payoff intrínseco**. "
+            "La diferencia vertical entre la superficie y esa línea es el **valor temporal**: "
+            "máximo cuando la opción está ATM y hay mucho tiempo restante."
+        )
+ 
+    with tab_s3d_delta:
+        cs_d = "RdBu" if es_call_gr else "RdBu_r"
+        st.plotly_chart(_surf_fig(_Z_delta,
+            f"Delta — {'Call' if es_call_gr else 'Put'} | K={K_gr:.0f} | σ={sig_gr*100:.0f}%",
+            "Delta Δ", cs_d), use_container_width=True)
+        themed_info(
+            "Observa cómo Delta converge bruscamente a 0 o 1 (call) conforme T → 0: "
+            "la opción pierde su zona de incertidumbre y se comporta como una posición binaria. "
+            "Con mucho tiempo la superficie es suave — el Spot tiene espacio para moverse."
+        )
+ 
+    with tab_s3d_gamma:
+        st.plotly_chart(_surf_fig(_Z_gamma,
+            f"Gamma | K={K_gr:.0f} | σ={sig_gr*100:.0f}%",
+            "Gamma Γ", "Greens"), use_container_width=True)
+        themed_info(
+            "La cresta de Gamma siempre está sobre el Strike K. "
+            "Su altura **explota** conforme T → 0: el riesgo de convexidad se concentra "
+            "totalmente ATM en los últimos días de vida de la opción."
+        )
+ 
+    separador()
+ 
+    # =========================================================================
+    # SECCIÓN A3 — Griegas vs Tiempo al Vencimiento
+    # =========================================================================
+    st.markdown(
+        f"<p style='font-weight:700;color:{c['subtitle_color']};font-size:13px;"
+        f"text-transform:uppercase;letter-spacing:0.7px;margin:4px 0;'>"
+        f"Griegas vs Tiempo al Vencimiento (T)</p>",
+        unsafe_allow_html=True,
+    )
+    themed_info(
+        "Con el Spot fijo, estas gráficas muestran cómo cada griega evoluciona mientras la opción "
+        "se acerca a su vencimiento para tres niveles de moneyness. "
+        "La **explosión de Gamma ATM** cerca de T = 0 es el fenómeno más importante "
+        "en la gestión de opciones."
+    )
+ 
+    _T_range = np.linspace(0.02, max(T_gr * 2, 0.5), 200)
+ 
+    def _greek_vs_T(greek_key, title, ytitle):
+        fig = go.Figure()
+        for (label, s_val), dash, col_line in zip(
+                _moneyness.items(), _dash_styles, _colors_mon):
+            vals = [engine.calcular_griegas(s_val, K_gr, r_gr, sig_gr, t,
+                                             es_call_gr, q_gr)[greek_key]
+                    for t in _T_range]
+            fig.add_trace(go.Scatter(x=_T_range, y=vals, mode="lines", name=label,
+                line=dict(color=col_line, width=2, dash=dash)))
+        fig.add_vline(x=T_gr, line_dash="dot", line_color=c["text_muted"], line_width=1.5,
+                      annotation_text=f"T={T_gr:.2f}",
+                      annotation_font=dict(size=10, color=c["text_muted"]))
+        fig = apply_plotly_theme(fig)
+        fig.update_layout(
+            **plotly_theme(),
+            title=dict(text=title, font=dict(size=13)),
+            xaxis_title="Tiempo al vencimiento T (años)",
+            yaxis_title=ytitle,
+            height=295,
+            margin=dict(l=50, r=20, t=48, b=42),
+        )
+        return fig
+ 
+    col_tv1, col_tv2 = st.columns(2)
+    with col_tv1:
+        st.plotly_chart(_greek_vs_T("delta",
+            "Δ Delta vs T | OTM · ATM · ITM", "Delta Δ"), use_container_width=True)
+        themed_info(
+            "Delta ATM parte siempre de ≈ 0.5. "
+            "Delta ITM converge a 1 (call) y Delta OTM a 0 conforme T → 0: "
+            "la incertidumbre del resultado desaparece con el tiempo."
+        )
+    with col_tv2:
+        st.plotly_chart(_greek_vs_T("gamma",
+            "Γ Gamma vs T | OTM · ATM · ITM", "Gamma Γ"), use_container_width=True)
+        themed_info(
+            "La **explosión de Gamma ATM** (línea sólida) es el fenómeno más relevante "
+            "para el delta-hedging: el costo de cobertura se vuelve impredecible en los "
+            "últimos días de vida de la opción."
+        )
+ 
+    col_tv3, col_tv4 = st.columns(2)
+    with col_tv3:
+        st.plotly_chart(_greek_vs_T("theta",
+            "Θ Theta vs T | OTM · ATM · ITM", "Theta Θ ($/día)"), use_container_width=True)
+        themed_info(
+            "Theta ATM se vuelve más negativo conforme T → 0: "
+            "el tiempo destruye valor más rápido en los últimos días. "
+            "Theta y Gamma son las dos caras de la misma moneda."
+        )
+    with col_tv4:
+        st.plotly_chart(_greek_vs_T("vega",
+            "𝒱 Vega vs T | OTM · ATM · ITM", "Vega 𝒱 ($/1%σ)"), use_container_width=True)
+        themed_info(
+            "Vega aumenta con T: las opciones de largo plazo valoran más la incertidumbre futura. "
+            "Conforme T → 0, la volatilidad ya no puede ayudar — el resultado está casi determinado."
+        )
+ 
+    separador()
+ 
+    # =========================================================================
+    # SECCIÓN A4 — Theta-Gamma Tradeoff + Break-Even Vol
+    # =========================================================================
+    st.markdown(
+        f"<p style='font-weight:700;color:{c['subtitle_color']};font-size:13px;"
+        f"text-transform:uppercase;letter-spacing:0.7px;margin:4px 0;'>"
+        f"Theta–Gamma Tradeoff y Volatilidad Break-Even</p>",
+        unsafe_allow_html=True,
+    )
+    themed_info(
+        "La ecuación del delta-hedging de Black-Scholes establece que "
+        "**Θ + ½σ²S²Γ + rSΔ = rV**. "
+        "En una posición delta-neutral esto colapsa a **Θ ≈ −½σ²S²Γ**: "
+        "más convexidad (Gamma) implica más decaimiento (Theta). "
+        "Este es el corazón teórico del delta-hedging continuo."
+    )
+ 
+    col_tg1, col_tg2 = st.columns(2)
+ 
+    with col_tg1:
+        fig_tg = go.Figure()
+        fig_tg.add_trace(go.Scatter(
+            x=gammas, y=thetas,
+            mode="lines+markers",
+            marker=dict(
+                size=4, color=spots,
+                colorscale="Viridis",
+                colorbar=dict(
+                              title=dict(text="Spot S", font=dict(color=c["text_color"])),
+                              thickness=12,
+                              tickfont=dict(color=c["text_muted"]),
+                          ),
+            ),
+            line=dict(color=c["primary"], width=1.5),
+            name="(Γ, Θ) vs Spot",
+        ))
+        fig_tg.add_trace(go.Scatter(
+            x=[griegas["gamma"]], y=[griegas["theta"]],
+            mode="markers", name=f"S₀={S_gr:.0f}",
+            marker=dict(size=12, color=c["accent"], symbol="star"),
+        ))
+        fig_tg = apply_plotly_theme(fig_tg)
+        fig_tg.update_layout(
+            **plotly_theme(),
+            title=dict(text="Θ vs Γ (parámetro: Spot S)", font=dict(size=13)),
+            xaxis_title="Gamma Γ",
+            yaxis_title="Theta Θ ($/día)",
+            height=330,
+            margin=dict(l=50, r=20, t=48, b=42),
+        )
+        st.plotly_chart(fig_tg, use_container_width=True)
+        themed_info(
+            "Cada punto de la curva corresponde a un nivel de Spot diferente. "
+            "La relación es monótonamente inversa: donde Gamma es máximo (ATM), "
+            "Theta es el más negativo. El comprador de opciones siempre paga el tiempo "
+            "a cambio de convexidad."
+        )
+ 
+    with col_tg2:
+        be_vols = []
+        for g_val, th_val, s_val in zip(gammas, thetas, spots):
+            if g_val > 1e-10:
+                be_vols.append(np.sqrt(-2 * th_val / g_val) / s_val * 100)
+            else:
+                be_vols.append(np.nan)
+ 
+        fig_be = go.Figure()
+        fig_be.add_trace(go.Scatter(
+            x=spots, y=be_vols, mode="lines",
+            name="Vol Break-Even (%)",
+            line=dict(color=COL["vomma"], width=2.5),
+        ))
+        fig_be.add_hline(
+            y=sig_gr * 100, line_dash="dash",
+            line_color=c["text_muted"], line_width=1.5,
+            annotation_text=f"σ implícita = {sig_gr*100:.0f}%",
+            annotation_font=dict(size=10, color=c["text_muted"]),
+        )
+        _vline(fig_be)
+        fig_be = apply_plotly_theme(fig_be)
+        fig_be.update_layout(
+            **plotly_theme(),
+            title=dict(text="Volatilidad Break-Even = √(−2Θ/Γ) / S", font=dict(size=13)),
+            xaxis_title="Precio Spot S",
+            yaxis_title="Vol Break-Even (%)",
+            height=330,
+            margin=dict(l=50, r=20, t=48, b=42),
+        )
+        st.plotly_chart(fig_be, use_container_width=True)
+        themed_info(
+            "La **volatilidad break-even** es cuánto debe moverse el subyacente diariamente "
+            "para que las ganancias de Gamma compensen el decaimiento de Theta. "
+            "Si la vol realizada > línea punteada → el comprador gana. "
+            "Si es menor → el vendedor gana."
+        )
+ 
+    separador()
+ 
+    # =========================================================================
+    # SECCIÓN B1 — Griegas de Segundo Orden (Vanna, Vomma, Charm, Speed, Color)
+    # =========================================================================
+    with st.expander("Griegas de Segundo Orden: Vanna · Vomma · Charm · Speed · Color"):
+        themed_info(
+            "Las **griegas de segundo orden** son derivadas cruzadas de la prima BSM. "
+            "Son esenciales en la gestión avanzada de libros de opciones y en estrategias "
+            "de volatilidad (Vanna-Vomma approach)."
+        )
+ 
+        col_v1, col_v2 = st.columns(2)
+ 
+        with col_v1:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=spots, y=vannas, mode="lines",
+                name="Vanna (∂Δ/∂σ)", line=dict(color=COL["vanna"], width=2.5)))
+            fig.add_hline(y=0, line_dash="dash", line_color=c["text_muted"], line_width=1)
+            _vline(fig)
+            fig = _layout(fig, "Vanna = ∂Δ/∂σ = ∂Vega/∂S", "Vanna")
+            st.plotly_chart(fig, use_container_width=True)
+            themed_info(
+                "**Vanna** mide cómo cambia Delta ante un cambio en σ (y vice versa). "
+                "Es cero ATM y máximo a ±1 desviación estándar. "
+                "Clave para cubrir riesgo cruzado Spot-Vol."
+            )
+ 
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=spots, y=speeds, mode="lines",
+                name="Speed (∂Γ/∂S)", line=dict(color=COL["speed"], width=2.5)))
+            fig.add_hline(y=0, line_dash="dash", line_color=c["text_muted"], line_width=1)
+            _vline(fig)
+            fig = _layout(fig, "Speed = ∂Γ/∂S (3ª derivada respecto a S)", "Speed")
+            st.plotly_chart(fig, use_container_width=True)
+            themed_info(
+                "**Speed** indica si Gamma está creciendo o decreciendo en la dirección del movimiento. "
+                "Relevante para estrategias de gamma scalping dinámico."
+            )
+ 
+        with col_v2:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=spots, y=vommas, mode="lines",
+                name="Vomma (∂Vega/∂σ)", line=dict(color=COL["vomma"], width=2.5)))
+            _vline(fig)
+            fig = _layout(fig, "Vomma (Volga) = ∂Vega/∂σ ($/1%²σ)", "Vomma")
+            st.plotly_chart(fig, use_container_width=True)
+            themed_info(
+                "**Vomma** mide la convexidad de la prima respecto a σ. "
+                "Siempre positivo: las ganancias de Vega son asimétricas (σ↑ beneficia más que σ↓ perjudica). "
+                "Máximo OTM — las opciones fuera del dinero tienen la mayor convexidad de volatilidad."
+            )
+ 
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=spots, y=charms, mode="lines",
+                name="Charm (∂Δ/∂T)", line=dict(color=COL["charm"], width=2.5)))
+            fig.add_hline(y=0, line_dash="dash", line_color=c["text_muted"], line_width=1)
+            _vline(fig)
+            fig = _layout(fig, "Charm = ∂Δ/∂T (decaimiento de Delta, por día)", "Charm (Δ/día)")
+            st.plotly_chart(fig, use_container_width=True)
+            themed_info(
+                "**Charm** mide cuánto cambia Delta con el paso del tiempo. "
+                "Crítico para opciones de fin de semana o ahead de eventos: "
+                "la cobertura del viernes puede estar equivocada el lunes."
+            )
+ 
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=spots, y=colors_arr, mode="lines",
+            name="Color (∂Γ/∂T)", line=dict(color=COL["color_"], width=2.5)))
+        fig.add_hline(y=0, line_dash="dash", line_color=c["text_muted"], line_width=1)
+        _vline(fig)
+        fig = _layout(fig, "Color = ∂Γ/∂T (decaimiento de Gamma, por día)", "Color (Γ/día)", height=270)
+        st.plotly_chart(fig, use_container_width=True)
+        themed_info(
+            "**Color** mide cuánto cambia Gamma con el paso del tiempo. "
+            "ATM y cerca del vencimiento, Color es muy grande: "
+            "Gamma puede crecer o colapsar rápidamente de un día para otro."
+        )
+ 
+        separador()
+        st.markdown("**Fórmulas de segundo order** (con dividendo continuo q)")
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            st.latex(r"\text{Vanna}=-e^{-qT}n(d_1)\frac{d_2}{\sigma}")
+            st.latex(r"\text{Vomma}=\mathcal{V}\cdot\frac{d_1 d_2}{\sigma}")
+            st.latex(r"\text{Speed}=-\frac{\Gamma}{S}\left(\frac{d_1}{\sigma\sqrt{T}}+1\right)")
+        with col_f2:
+            st.latex(r"\text{Charm}_{call}=q e^{-qT}N(d_1)-e^{-qT}n(d_1)\frac{2(r-q)T-d_2\sigma\sqrt{T}}{2T\sigma\sqrt{T}}")
+            st.latex(r"\text{Color}=-\frac{e^{-qT}n(d_1)}{2ST\sigma\sqrt{T}}\left(2qT+1+\frac{2(r-q)T-d_2\sigma\sqrt{T}}{\sigma\sqrt{T}}d_1\right)")
+ 
+    # =========================================================================
+    # SECCIÓN B2 — Griegas vs Volatilidad implícita
+    # =========================================================================
+    with st.expander("Griegas vs Volatilidad implícita (σ) — Shocks de vol"):
+        themed_info(
+            "Con S₀, K y T fijos, estas gráficas muestran cómo reacciona cada griega "
+            "ante shocks de volatilidad para tres niveles de moneyness. "
+            "Útil para entender el riesgo de Vega en distintos entornos de mercado."
+        )
+ 
+        _sig_range = np.linspace(0.02, 1.20, 200)
+ 
+        def _greek_vs_sig(greek_key, title, ytitle):
+            fig = go.Figure()
+            for (label, s_val), dash, col_line in zip(
+                    _moneyness.items(), _dash_styles, _colors_mon):
+                vals = [engine.calcular_griegas(s_val, K_gr, r_gr, sig_v,
+                                                 T_gr, es_call_gr, q_gr)[greek_key]
+                        for sig_v in _sig_range]
+                fig.add_trace(go.Scatter(
+                    x=_sig_range * 100, y=vals, mode="lines", name=label,
+                    line=dict(color=col_line, width=2, dash=dash),
+                ))
+            fig.add_vline(x=sig_gr * 100, line_dash="dot",
+                          line_color=c["text_muted"], line_width=1.5,
+                          annotation_text=f"σ={sig_gr*100:.0f}%",
+                          annotation_font=dict(size=10, color=c["text_muted"]))
+            fig = apply_plotly_theme(fig)
+            fig.update_layout(
+                **plotly_theme(),
+                title=dict(text=title, font=dict(size=13)),
+                xaxis_title="Volatilidad σ (%)",
+                yaxis_title=ytitle,
+                height=285,
+                margin=dict(l=50, r=20, t=48, b=42),
+            )
+            return fig
+ 
+        col_sv1, col_sv2 = st.columns(2)
+        with col_sv1:
+            st.plotly_chart(_greek_vs_sig("delta",
+                "Δ Delta vs σ | OTM · ATM · ITM", "Delta Δ"), use_container_width=True)
+            st.plotly_chart(_greek_vs_sig("theta",
+                "Θ Theta vs σ | OTM · ATM · ITM", "Theta Θ ($/día)"), use_container_width=True)
+        with col_sv2:
+            st.plotly_chart(_greek_vs_sig("gamma",
+                "Γ Gamma vs σ | OTM · ATM · ITM", "Gamma Γ"), use_container_width=True)
+            st.plotly_chart(_greek_vs_sig("vega",
+                "𝒱 Vega vs σ | OTM · ATM · ITM", "Vega 𝒱 ($/1%σ)"), use_container_width=True)
+ 
+        themed_info(
+            "Nota cómo Delta OTM e ITM **convergen** con alta volatilidad: "
+            "cuando σ es muy grande, todas las opciones se comportan más parecido. "
+            "Gamma y Vega ATM alcanzan su máximo a volatilidades moderadas y declinan "
+            "en entornos de vol extrema (el activo ya es tan volátil que la opción no añade mucho)."
+        )
+ 
+    # =========================================================================
+    # SECCIÓN B3 — Vista comparativa normalizada
+    # =========================================================================
+    with st.expander("Vista comparativa — Todas las griegas normalizadas"):
+        themed_info(
+            "Cada griega se normaliza dividiendo entre su valor máximo absoluto en el rango. "
+            "Esto revela diferencias de forma (dónde es máxima cada sensibilidad) sin mezclar unidades."
+        )
+        fig_all = go.Figure()
+        traces_all = [
+            ("Δ Delta",  deltas,      COL["delta"],  "solid"),
+            ("Γ Gamma",  gammas,      COL["gamma"],  "solid"),
+            ("Θ Theta",  thetas,      COL["theta"],  "dot"),
+            ("𝒱 Vega",  vegas,       COL["vega"],   "dash"),
+            ("ρ Rho",    rhos,        COL["rho"],    "longdash"),
+            ("Vanna",    vannas,      COL["vanna"],  "dashdot"),
+            ("Vomma",    vommas,      COL["vomma"],  "dot"),
+            ("Charm",    charms,      COL["charm"],  "dash"),
+        ]
+        for name, data, col_line, dash in traces_all:
+            fig_all.add_trace(go.Scatter(
+                x=spots, y=_norm(data), mode="lines", name=name,
+                line=dict(color=col_line, width=1.8, dash=dash),
+            ))
+        _vline(fig_all)
+        fig_all.add_hline(y=0, line_color=c["border"], line_width=1)
+        fig_all = apply_plotly_theme(fig_all)
+        fig_all.update_layout(
+            **plotly_theme(),
+            title=f"Griegas normalizadas | {'Call' if es_call_gr else 'Put'} | K={K_gr:.0f} | T={T_gr:.2f}a | σ={sig_gr*100:.0f}%",
+            xaxis_title="Precio Spot S",
+            yaxis_title="Valor normalizado (÷ máx absoluto)",
+            height=430,
+            margin=dict(l=50, r=20, t=50, b=45),
+        )
+        st.plotly_chart(fig_all, use_container_width=True)
+ 
+    # =========================================================================
+    # FÓRMULAS MATEMÁTICAS COMPLETAS
+    # =========================================================================
+    with st.expander("Fórmulas matemáticas completas (1er y 2do orden, con dividendo q)"):
+        themed_info(
+            "Todas las griegas derivan de BSM con dividendo continuo q. "
+            "<em>n(x)</em> = densidad normal estándar, <em>N(x)</em> = distribución acumulada."
+        )
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            st.markdown("**Primer orden**")
+            st.latex(r"d_1=\frac{\ln(S/K)+(r-q+\frac{\sigma^2}{2})T}{\sigma\sqrt{T}},\quad d_2=d_1-\sigma\sqrt{T}")
+            st.latex(r"\Delta_{call}=e^{-qT}N(d_1),\quad \Delta_{put}=-e^{-qT}N(-d_1)")
+            st.latex(r"\Gamma=\frac{e^{-qT}n(d_1)}{S\sigma\sqrt{T}}")
+            st.latex(r"\Theta_{call}=-\frac{Sn(d_1)\sigma e^{-qT}}{2\sqrt{T}}-rKe^{-rT}N(d_2)+qSe^{-qT}N(d_1)")
+            st.latex(r"\mathcal{V}=S\sqrt{T}e^{-qT}n(d_1)\cdot 0.01")
+            st.latex(r"\rho_{call}=KTe^{-rT}N(d_2)\cdot 0.01")
+        with col_f2:
+            st.markdown("**Segundo orden**")
+            st.latex(r"\text{Vanna}=-e^{-qT}n(d_1)\frac{d_2}{\sigma}")
+            st.latex(r"\text{Vomma}=\mathcal{V}\cdot\frac{d_1 d_2}{\sigma}")
+            st.latex(r"\text{Charm}_{call}=qe^{-qT}N(d_1)-e^{-qT}n(d_1)\frac{2(r-q)T-d_2\sigma\sqrt{T}}{2T\sigma\sqrt{T}}")
+            st.latex(r"\text{Speed}=-\frac{\Gamma}{S}\left(\frac{d_1}{\sigma\sqrt{T}}+1\right)")
+            st.latex(r"\text{Color}=-\frac{e^{-qT}n(d_1)}{2ST\sigma\sqrt{T}}\left(2qT+1+d_1\frac{2(r-q)T-d_2\sigma\sqrt{T}}{\sigma\sqrt{T}}\right)")
+            st.markdown("**Relación fundamental PDE de BS + Break-even**")
+            st.latex(r"\Theta+\tfrac{1}{2}\sigma^2S^2\Gamma+rS\Delta=rV")
+            st.latex(r"\sigma_{BE}=\sqrt{\frac{-2\Theta}{\Gamma}}\cdot\frac{1}{S}")
+ 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 4 — COMPARATIVA BSM vs CRR
@@ -928,7 +1653,7 @@ with tab_est:
     separador()
 
     # ── Análisis de puntos clave ──────────────────────────────────────────────
-    with st.expander("📐 Desglose Financiero (Límites y Puntos de Equilibrio)"):
+    with st.expander("Desglose Financiero (Límites y Puntos de Equilibrio)"):
         S_T_rng = np.linspace(S_est * 0.5, S_est * 1.5, 5000)
         payoff_tot = np.zeros_like(S_T_rng)
         for p in patas:
@@ -956,7 +1681,7 @@ with tab_est:
 # TAB 6 — ACTIVOS REALES (YAHOO FINANCE)
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_real:
-    st.markdown("### Valuación de Opciones sobre Activos Reales")
+    st.markdown("### Valuación de Opciones sobre subyacentes reales extraidos desde Yahoo Finance")
     themed_info(
         "Esta integración conecta los modelos teóricos con el **mundo real**. "
         "Descarga automáticamente el precio de cierre ajustado actual (<span style='font-family: serif; font-style: italic;'>S<sub>0</sub></span>) "
@@ -1350,8 +2075,12 @@ with tab_vol:
     try:
         sig_impl = _brentq(_bsm_price, 1e-6, 10.0, xtol=1e-8, maxiter=200)
         c_th_v = get_current_theme()
+        
         themed_success(
-            f"<h3 style='margin:0; color:inherit;'>Riesgo Extraído (Volatilidad Implícita): {sig_impl*100:.4f}%</h3>"
+            f"<div style='{css_contenedor}'>"
+            f"<span style='{css_titulo}'>Riesgo Extraído (<span style='{math_style}'>&sigma;<sub>impl</sub></span>)</span>"
+            f"<span style='{css_valor}'>{sig_impl*100:.4f}%</span>"
+            f"</div>"
         )
         
         with paso_a_paso():
@@ -1359,7 +2088,7 @@ with tab_vol:
             st.latex(rf"f(\sigma_{{impl}}) = \text{{BSM}}({S_vol:,.2f}, {K_vol:,.2f}, {r_vol:.4f}, \sigma_{{impl}}, {T_vol:.4f}) - {precio_mkt:,.4f} = 0")
             alerta_metodo_numerico()
             st.latex(rf"\sigma_{{impl}} \approx {sig_impl:.6f}")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>\sigma_{{impl}} = {sig_impl*100:.4f}\%</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>&sigma;<sub>impl</sub></span> = {sig_impl*100:.4f}%</div>")
             
     except ValueError:
         themed_error(
@@ -1371,119 +2100,263 @@ with tab_vol:
 
     separador()
 
-    # ── SONRISA DE VOLATILIDAD ─────────────────────────────────────────────────
-    st.markdown("#### Matriz Tridimensional de Superficie y Sonrisa")
+    # ── SUPERFICIE 3D DE VOLATILIDAD IMPLÍCITA ───────────────────────────────
+    st.markdown("#### Superficie de Volatilidad Implícita σ(M, T)")
     themed_info(
-        "En un mercado perfectamente Gaussiano, la volatilidad implícita sería una línea plana horizontal (Teoría BSM). "
-        "En la práctica, las opciones Out-of-the-Money se sobrevaloran por miedo a 'Cisnes Negros', creando la clásica **Sonrisa** "
-        "o **Sesgo de Volatilidad (Skew)**. Al extenderla por expiraciones, formamos una topología completa de riesgo de mercado."
+        "La **superficie de volatilidad** es la topología completa del riesgo de mercado: "
+        "muestra cómo cambia σ implícita para todos los strikes (eje de Moneyness M = K/S) "
+        "y todos los vencimientos (eje T). "
+        "Si BSM fuera correcto, sería un plano plano. "
+        "En la práctica tiene dos anomalías visibles que los mercados reales producen:"
     )
 
-    c_th_v2 = get_current_theme()
+    c_surf = get_current_theme()
 
-    strikes_pct_def = [-20, -15, -10, -5, -2, 0, 2, 5, 10, 15, 20]
-    strikes_def = [round(S_vol * (1 + p/100), 2) for p in strikes_pct_def]
-
-    sig_atm = sig_impl if sig_impl else 0.20
-    def _smile_vol(K):
-        m = np.log(K / S_vol)
-        return sig_atm + 0.04 * m**2 - 0.01 * m
-
-    def_prices = [round(engine.black_scholes(S_vol, K, r_vol, _smile_vol(K), T_vol,
-                                              es_call_vol, q_vol), 4)
-                  for K in strikes_def]
-
-    df_chain = pd.DataFrame({
-        "Nivel de Ejecución ($K$)": strikes_def,
-        "Prima Cotizada Libre ($)": def_prices,
-    })
-    
-    st.caption("Pizarra Interbancaria (Modifica las primas libremente para forzar una recalibración asimétrica):")
-    ed_chain = st.data_editor(
-        df_chain, hide_index=True, use_container_width=True,
-        column_config={
-            "Nivel de Ejecución ($K$)":        st.column_config.NumberColumn("Strike ($K$)", format="%.2f", step=1.0),
-            "Prima Cotizada Libre ($)": st.column_config.NumberColumn("Costo de Pizarra ($)", format="%.4f", step=0.01, min_value=0.0001),
-        }
-    )
-
-    impl_vols = []
-    for _, row in ed_chain.iterrows():
-        K_r = float(row["Nivel de Ejecución ($K$)"])
-        P_r = float(row["Prima Cotizada Libre ($)"])
-        try:
-            def _f(sigma): return engine.black_scholes(S_vol, K_r, r_vol, sigma, T_vol,
-                                                        es_call_vol, q_vol) - P_r
-            sv_r = _brentq(_f, 1e-6, 10.0, xtol=1e-8, maxiter=200)
-        except Exception:
-            sv_r = np.nan
-        impl_vols.append(sv_r)
-
-    moneyness = [K/S_vol for K in ed_chain["Nivel de Ejecución ($K$)"].values]
-
-    col_smile1, col_smile2 = st.columns(2)
-
-    with col_smile1:
-        fig_smile = go.Figure()
-        valid = [(m, v) for m, v in zip(moneyness, impl_vols) if not np.isnan(v)]
-        if valid:
-            ms, vs = zip(*valid)
-            fig_smile.add_trace(go.Scatter(
-                x=list(ms), y=[v*100 for v in vs],
-                mode="lines+markers", name="σ recuperada",
-                line=dict(color=c_th_v2["accent"], width=2.5),
-                marker=dict(size=8, color=c_th_v2["primary"]),
-            ))
-            fig_smile.add_hline(y=sig_atm*100, line_dash="dot",
-                                 line_color=c_th_v2["text_muted"],
-                                 annotation_text=f"Ancla BSM={sig_atm*100:.1f}%")
-            fig_smile.add_vline(x=1.0, line_dash="dash",
-                                 line_color=c_th_v2["success"],
-                                 annotation_text="ATM Neutro")
-        fig_smile.update_layout(
-            title="Curvatura Estructural (Volatility Smile)",
-            xaxis_title="Relación Moneyness Estricta (K/S)",
-            yaxis_title="Varianza de Mercado (%)",
-            height=400, **plotly_theme(),
+    col_exp1, col_exp2 = st.columns(2)
+    with col_exp1:
+        st.markdown(
+            f"<div style='background:{c_surf['warning_bg']};border-left:4px solid {c_surf['warning_border']};"
+            f"border-radius:8px;padding:10px 14px;font-size:13px;'>"
+            f"<b>Volatility Smile / Skew</b> (eje horizontal): "
+            f"Las opciones OTM tienen mayor σ implícita que las ATM. "
+            f"En acciones el sesgo es asimétrico (más pronunciado en puts OTM = miedo a caídas)."
+            f"</div>",
+            unsafe_allow_html=True,
         )
-        st.plotly_chart(fig_smile, use_container_width=True)
+    with col_exp2:
+        st.markdown(
+            f"<div style='background:{c_surf['warning_bg']};border-left:4px solid {c_surf['warning_border']};"
+            f"border-radius:8px;padding:10px 14px;font-size:13px;'>"
+            f"<b>Term Structure</b> (eje de tiempo): "
+            f"La vol implícita varía con el plazo. En mercados con estrés, "
+            f"el corto plazo tiene mayor vol (inversión); en mercados tranquilos, "
+            f"el largo plazo puede tener mayor vol (prima de incertidumbre)."
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
-    with col_smile2:
-        df_res_vol = pd.DataFrame({
-            "Régimen $K":       ed_chain["Nivel de Ejecución ($K$)"].values,
-            "Distancia (Moneyness)":    [f"{m:.4f}" for m in moneyness],
-            "Lectura (Ticket)":   [f"${p:.4f}" for p in ed_chain["Prima Cotizada Libre ($)"].values],
-            "Asimetría (σ_impl)":   [f"{v*100:.4f}%" if not np.isnan(v) else "—" for v in impl_vols],
-        })
-        st.dataframe(df_res_vol, hide_index=True, use_container_width=True, height=370)
+    st.markdown(" ")
+
+    # Parametrización de la superficie usando moneyness M = K/S
+    sig_atm = sig_impl if sig_impl else 0.20   
+    # σ(M, T) = σ_atm + a*(ln M)² - b*(ln M) + c/√T
+    # donde ln M captura el skew y c/√T la term structure
+    # a, b, c se calibran para que a T largo la superficie se aplane
+    _a_skew = 0.08    # curvatura del smile
+    _b_skew = 0.02    # asimetría (skew negativo en acciones: puts OTM más caras)
+    _c_term = 0.015   # term structure (vol cae con raíz de T)
+
+    # Ejes: moneyness M = K/S de 0.6 a 1.5, T de 1 mes a 2 años
+    _M_surf = np.linspace(0.60, 1.50, 60)
+    _T_surf_vol = np.linspace(1/12, 2.0, 40)
+
+    _Z_surf = np.zeros((len(_T_surf_vol), len(_M_surf)))
+    for i, t in enumerate(_T_surf_vol):
+        for j, m in enumerate(_M_surf):
+            lm = np.log(m)
+            sigma_s = sig_atm + _a_skew * lm**2 - _b_skew * lm + _c_term / np.sqrt(t)
+            _Z_surf[i, j] = max(sigma_s * 100, 0.5)   # mínimo 0.5% para evitar negativos
+
+    # Tabs: superficie con smile + superficie BSM plana (contraste pedagógico)
+    tab_surf_real, tab_surf_bsm, tab_surf_diff = st.tabs([
+        "Superficie con Smile (realista)",
+        "Superficie BSM pura (plana)",
+        "Diferencia: Smile − BSM",
+    ])
+
+    def _surf_vol_layout(fig, title):
+        fig.update_layout(
+            title=dict(text=title, font=dict(color=c_surf["subtitle_color"], size=13)),
+            scene=dict(
+                xaxis=dict(
+                    title="Moneyness M = K/S",
+                    tickfont=dict(color=c_surf["text_muted"]),
+                    gridcolor=c_surf["border"],
+                    backgroundcolor=c_surf["bg_light"],
+                ),
+                yaxis=dict(
+                    title="Tiempo al Vencimiento T (años)",
+                    tickfont=dict(color=c_surf["text_muted"]),
+                    gridcolor=c_surf["border"],
+                    backgroundcolor=c_surf["bg_light"],
+                ),
+                zaxis=dict(
+                    title="σ Implícita (%)",
+                    tickfont=dict(color=c_surf["text_muted"]),
+                    gridcolor=c_surf["border"],
+                    backgroundcolor=c_surf["bg_light"],
+                ),
+                bgcolor=c_surf["bg_main"],
+            ),
+            paper_bgcolor=c_surf["bg_main"],
+            font=dict(color=c_surf["text_color"]),
+            height=520,
+            margin=dict(l=0, r=0, t=50, b=0),
+        )
+        return fig
+
+    with tab_surf_real:
+        fig_surf_real = go.Figure(data=[go.Surface(
+            x=_M_surf,
+            y=_T_surf_vol,
+            z=_Z_surf,
+            colorscale="RdYlBu_r",
+            colorbar=dict(
+                title=dict(text="σ impl (%)", font=dict(color=c_surf["text_color"])),
+                tickfont=dict(color=c_surf["text_muted"]),
+            ),
+            opacity=0.93,
+            contours=dict(
+                z=dict(show=True, usecolormap=True, highlightcolor="white", project_z=True)
+            ),
+        )])
+        # Línea ATM (M=1) para todos los T
+        atm_z = [sig_atm * 100 + _c_term / np.sqrt(t) * 100 for t in _T_surf_vol]
+        fig_surf_real.add_trace(go.Scatter3d(
+            x=[1.0] * len(_T_surf_vol),
+            y=_T_surf_vol,
+            z=atm_z,
+            mode="lines",
+            name="ATM (M=1)",
+            line=dict(color=c_surf["success"], width=4),
+        ))
+        # Punto del contrato actual
+        m_actual = K_vol / S_vol
+        sig_actual_surf = sig_atm + _a_skew * np.log(m_actual)**2 - _b_skew * np.log(m_actual) + _c_term / np.sqrt(T_vol)
+        fig_surf_real.add_scatter3d(
+            x=[m_actual], y=[T_vol], z=[sig_actual_surf * 100],
+            mode="markers", name=f"Contrato actual (M={m_actual:.2f})",
+            marker=dict(size=7, color=c_surf["accent"], symbol="circle"),
+        )
+        fig_surf_real = _surf_vol_layout(fig_surf_real,
+            f"Superficie de Volatilidad con Smile | σ_ATM={sig_atm*100:.1f}%")
+        st.plotly_chart(fig_surf_real, use_container_width=True)
+        themed_info(
+            "La **cresta de color rojo** (alta vol) en la zona M < 1 (puts OTM) refleja el "
+            "**equity skew**: los inversores pagan una prima extra por protección bajista. "
+            "La línea verde marca la vol ATM para cada plazo — nota cómo sube hacia la izquierda "
+            "(skew) y varía con T (term structure)."
+        )
+
+    with tab_surf_bsm:
+        _Z_flat = np.full_like(_Z_surf, sig_atm * 100)
+        fig_surf_bsm = go.Figure(data=[go.Surface(
+            x=_M_surf,
+            y=_T_surf_vol,
+            z=_Z_flat,
+            colorscale="Blues",
+            colorbar=dict(
+                title=dict(text="σ impl (%)", font=dict(color=c_surf["text_color"])),
+                tickfont=dict(color=c_surf["text_muted"]),
+            ),
+            opacity=0.90,
+        )])
+        fig_surf_bsm = _surf_vol_layout(fig_surf_bsm,
+            f"Superficie BSM pura — plano σ = {sig_atm*100:.1f}% (constante para todos M y T)")
+        st.plotly_chart(fig_surf_bsm, use_container_width=True)
+        themed_info(
+            "**Black-Scholes asume que este plano es la realidad**: la misma σ para todos los strikes "
+            "y todos los vencimientos. "
+            "Comparado con la pestaña anterior, queda claro por qué BSM es una aproximación: "
+            "los mercados reales generan una topología mucho más compleja."
+        )
+
+    with tab_surf_diff:
+        _Z_diff = _Z_surf - sig_atm * 100   # diferencia en puntos porcentuales
+        fig_surf_diff = go.Figure(data=[go.Surface(
+            x=_M_surf,
+            y=_T_surf_vol,
+            z=_Z_diff,
+            colorscale="RdBu_r",
+            cmid=0,
+            colorbar=dict(
+                title=dict(text="Δσ (pp)", font=dict(color=c_surf["text_color"])),
+                tickfont=dict(color=c_surf["text_muted"]),
+            ),
+            opacity=0.93,
+            contours=dict(
+                z=dict(show=True, usecolormap=True, highlightcolor="white", project_z=True)
+            ),
+        )])
+        fig_surf_diff.add_trace(go.Scatter3d(
+            x=_M_surf, y=[_T_surf_vol[0]] * len(_M_surf), z=[0.0] * len(_M_surf),
+            mode="lines", name="Nivel BSM (Δσ=0)",
+            line=dict(color=c_surf["success"], width=3, dash="dash"),
+        ))
+        fig_surf_diff = _surf_vol_layout(fig_surf_diff,
+            "Diferencia: Smile − BSM (cuánto se aleja el mercado del supuesto de BSM)")
+        st.plotly_chart(fig_surf_diff, use_container_width=True)
+        themed_info(
+            "**Rojo** = el mercado cobra más volatilidad de lo que BSM predice (opciones más caras). "
+            "**Azul** = zonas donde BSM sobreestima la vol. "
+            "La zona roja en M < 1 y T corto es donde se concentra la mayor discrepancia: "
+            "el **equity skew de corto plazo**, impulsado por la demanda de puts de protección."
+        )
 
     separador()
 
-    T_vals  = [0.083, 0.25, 0.5, 1.0, 2.0]
-    T_labs  = ["1 MES","1 TRIM","1 SEM","1 AÑO","2 AÑOS"]
-    K_vals  = [S_vol*(1+p/100) for p in range(-25, 30, 5)]
-
-    surf_z = []
-    for T_s in T_vals:
-        row_s = []
-        for K_s in K_vals:
-            m_s = np.log(K_s/S_vol) / np.sqrt(T_s)
-            sigma_s = sig_atm + 0.03*m_s**2 - 0.008*m_s + 0.005/T_s
-            row_s.append(sigma_s*100)
-        surf_z.append(row_s)
-
-    fig_surf = go.Figure(data=go.Surface(
-        z=surf_z, x=K_vals, y=T_labs,
-        colorscale="Viridis",
-        colorbar=dict(title="Extracción σ (%)"),
-    ))
-    fig_surf.update_layout(
-        title="Simulación Espacial Estocástica de la Superficie de Volatilidad",
-        scene=dict(
-            xaxis_title="Eje Financiero ($K$)",
-            yaxis_title="Vecto Cronológico (T)",
-            zaxis_title="Elevación Riesgo (%)",
-        ),
-        height=500, **plotly_theme(),
+    # ── SMILE 2D POR VENCIMIENTO (cortes horizontales de la superficie) ────────
+    st.markdown("#### Smile de Volatilidad por Vencimiento (cortes de la superficie)")
+    themed_info(
+        "Cada curva es un **corte horizontal** de la superficie anterior a un vencimiento fijo. "
+        "Observa cómo el smile se **aplana y se desplaza** conforme T aumenta: "
+        "el skew de corto plazo es más pronunciado que el de largo plazo."
     )
-    st.plotly_chart(fig_surf, use_container_width=True)
+
+    _T_cortes = [1/12, 3/12, 6/12, 1.0, 2.0]
+    _T_labels  = ["1 mes", "3 meses", "6 meses", "1 año", "2 años"]
+    _colors_T  = [c_surf["danger"], c_surf["warning"], c_surf["success"],
+                  c_surf["primary"], c_surf["accent"]]
+
+    fig_smiles = go.Figure()
+    for t_c, lbl, col_c in zip(_T_cortes, _T_labels, _colors_T):
+        vols_corte = []
+        for m in _M_surf:
+            lm = np.log(m)
+            s_c = sig_atm + _a_skew * lm**2 - _b_skew * lm + _c_term / np.sqrt(t_c)
+            vols_corte.append(max(s_c * 100, 0.5))
+        fig_smiles.add_trace(go.Scatter(
+            x=_M_surf, y=vols_corte, mode="lines",
+            name=lbl, line=dict(color=col_c, width=2),
+        ))
+
+    # Línea BSM plana
+    fig_smiles.add_hline(
+        y=sig_atm * 100, line_dash="dash",
+        line_color=c_surf["text_muted"], line_width=1.5,
+        annotation_text=f"BSM plano (σ={sig_atm*100:.1f}%)",
+        annotation_font=dict(size=10, color=c_surf["text_muted"]),
+    )
+    fig_smiles.add_vline(
+        x=1.0, line_dash="dot",
+        line_color=c_surf["text_muted"], line_width=1,
+        annotation_text="ATM (M=1)",
+        annotation_font=dict(size=10, color=c_surf["text_muted"]),
+    )
+    # Punto del contrato actual
+    m_actual = K_vol / S_vol
+    fig_smiles.add_vline(
+        x=m_actual, line_dash="dot",
+        line_color=c_surf["accent"], line_width=1.5,
+        annotation_text=f"Contrato (M={m_actual:.2f})",
+        annotation_font=dict(size=10, color=c_surf["accent"]),
+    )
+    fig_smiles = apply_plotly_theme(fig_smiles)
+    fig_smiles.update_layout(
+        **plotly_theme(),
+        title=dict(
+            text=f"Smile por Vencimiento | σ_ATM={sig_atm*100:.1f}% | S={S_vol:.0f} | K actual={K_vol:.0f}",
+            font=dict(size=13)
+        ),
+        xaxis_title="Moneyness M = K/S",
+        yaxis_title="Volatilidad Implícita σ (%)",
+        height=400,
+        margin=dict(l=50, r=20, t=50, b=42),
+    )
+    st.plotly_chart(fig_smiles, use_container_width=True)
+    themed_info(
+        "La curva **roja (1 mes)** tiene el smile más pronunciado: el mercado cobra más por "
+        "opciones OTM de corto plazo porque un movimiento brusco en días es más temido que "
+        "en años. Conforme T crece (azul), el smile se aplana porque el tiempo promedia "
+        "los escenarios y reduce la asimetría percibida."
+    )

@@ -24,6 +24,13 @@ st.set_page_config(
 
 engine = get_engine()
 
+# --- Estilos globales para métricas destacadas ---
+math_style = "font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: normal; padding: 0 2px;"
+css_titulo = "font-size: 20px; opacity: 0.85; font-weight: 500;"
+css_valor = "font-size: 28px; font-weight: bold;"
+css_contenedor = "display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 0;"
+css_paso = "text-align: center; font-size: 22px; font-weight: bold; padding: 4px 0; margin: 0;"
+
 page_header(
     titulo="3. Valuación de Rentas y Anualidades",
     subtitulo="Constantes · Geométricas · Aritméticas · Perpetuas · Continuas"
@@ -147,7 +154,12 @@ with tab_vf:
                 R_vf, im_vf, nm_vf = R_anual, delta_vf, n_cont
 
         with c2:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Valor Futuro: ${vf_res:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Futuro (<span style='{math_style}'>VF</span>)</span>"
+                f"<span style='{css_valor}'>${vf_res:,.4f}</span>"
+                f"</div>"
+            )
             st.latex(formula)
 
         with paso_a_paso():
@@ -197,7 +209,7 @@ with tab_vf:
                     st.latex(rf"VF = {R_anual:,.2f} \left[ \frac{{{cap_n:.6f} - 1}}{{{delta_vf:.6f}}} \right]")
                     st.latex(rf"VF = {R_anual:,.2f} [{factor:.6f}]")
                     
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_res:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>VF</span> = ${vf_res:,.4f}</div>")
 
     # ──────────────────────────────────────────────
     # VF — GEOMÉTRICAS
@@ -223,7 +235,12 @@ with tab_vf:
         vf_geo = engine.vf_gradiente_geo(R1_vf, im_geo, qm_geo, nm_geo)
 
         with c2:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Valor Futuro: ${vf_geo:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Futuro (<span style='{math_style}'>VF</span>)</span>"
+                f"<span style='{css_valor}'>${vf_geo:,.4f}</span>"
+                f"</div>"
+            )
             if im_geo != qm_geo:
                 st.latex(rf"VF = R_1 \left[ \frac{{(1+{str_i})^{{nm}} - (1+{str_q})^{{nm}}}}{{{str_i} - {str_q}}} \right]")
             else:
@@ -242,7 +259,7 @@ with tab_vf:
                 st.latex(rf"VF = nm \cdot R_1 (1+{str_i})^{{nm-1}}")
                 st.latex(rf"VF = {nm_geo:g} \times {R1_vf:,.2f} \times (1 + {val_i})^{{{nm_geo:g}-1}}")
                 st.latex(rf"VF = {nm_geo * R1_vf:,.2f} \times {(1+im_geo)**(nm_geo-1):.6f}")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_geo:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>VF</span> = ${vf_geo:,.4f}</div>")
 
     # ──────────────────────────────────────────────
     # VF — ARITMÉTICAS
@@ -269,7 +286,12 @@ with tab_vf:
         vf_arit = engine.vf_gradiente_aritmetico(R1_arit, G_vf, im_arit, nm_arit)
 
         with c2:
-            themed_success(f"<h3 style='margin:0; color:inherit;'>Valor Futuro: ${vf_arit:,.4f}</h3>")
+            themed_success(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Futuro (<span style='{math_style}'>VF</span>)</span>"
+                f"<span style='{css_valor}'>${vf_arit:,.4f}</span>"
+                f"</div>"
+            )
             st.latex(rf"VF = R_1 \left[\frac{{(1+{str_i_a})^{{nm}}-1}}{{{str_i_a}}}\right] + \frac{{G}}{{{str_i_a}}}\left(\left[\frac{{(1+{str_i_a})^{{nm}}-1}}{{{str_i_a}}}\right] - nm\right)")
 
         with paso_a_paso():
@@ -283,7 +305,7 @@ with tab_vf:
             st.latex(rf"VF = {R1_arit:,.2f} \left[\frac{{{cap_n:.6f}-1}}{{{val_i_a}}}\right] + {G_vf/im_arit:,.2f} \left(\left[\frac{{{cap_n:.6f}-1}}{{{val_i_a}}}\right] - {nm_arit:g}\right)")
             st.latex(rf"VF = {R1_arit:,.2f} [{sn:.6f}] + {G_vf/im_arit:,.2f} ({sn:.6f} - {nm_arit:g})")
             st.latex(rf"VF = {t1_val:,.2f} + {t2_val:,.2f}")
-            themed_success(f"<h4 style='margin:0; color:inherit; text-align:center;'>VF = ${vf_arit:,.4f}</h4>")
+            themed_success(f"<div style='{css_paso}'><span style='{math_style}'>VF</span> = ${vf_arit:,.4f}</div>")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -379,7 +401,12 @@ with tab_vp:
                 R_vp, im_vp, nm_vp = R_anual_vp, delta_vp, n_cont_vp
 
         with c2:
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Valor Presente: ${vp_res:,.4f}</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Presente (<span style='{math_style}'>VP</span>)</span>"
+                f"<span style='{css_valor}'>${vp_res:,.4f}</span>"
+                f"</div>"
+            )
             st.latex(formula_vp)
 
         with paso_a_paso():
@@ -437,7 +464,7 @@ with tab_vp:
                     st.latex(rf"VP = {R_anual_vp:,.2f} \left[ \frac{{1 - {desc_n:.6f}}}{{{delta_vp:.6f}}} \right]")
                     st.latex(rf"VP = {R_anual_vp:,.2f} [{factor:.6f}]")
             
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_res:,.4f}</h4>")
+            themed_info(f"<div style='{css_paso}'><span style='{math_style}'>VP</span> = ${vp_res:,.4f}</div>")
 
     # ──────────────────────────────────────────────
     # VP — GEOMÉTRICAS
@@ -463,7 +490,12 @@ with tab_vp:
         vp_geo = engine.vp_gradiente_geo(R1_vp, im_geo_vp, qm_geo_vp, nm_geo_vp)
 
         with c2:
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Valor Presente: ${vp_geo:,.4f}</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Presente (<span style='{math_style}'>VP</span>)</span>"
+                f"<span style='{css_valor}'>${vp_geo:,.4f}</span>"
+                f"</div>"
+            )
             if im_geo_vp != qm_geo_vp:
                 st.latex(rf"VP = R_1 \left[ \frac{{1 - \left(\frac{{1+{str_q_gvp}}}{{1+{str_i_gvp}}}\right)^{{nm}}}}{{{str_i_gvp} - {str_q_gvp}}} \right]")
             else:
@@ -484,7 +516,7 @@ with tab_vp:
                 st.latex(rf"VP = \frac{{nm \cdot R_1}}{{1+{str_i_gvp}}}")
                 st.latex(rf"VP = \frac{{{nm_geo_vp:g} \times {R1_vp:,.2f}}}{{1 + {val_i_gvp}}}")
                 st.latex(rf"VP = \frac{{{nm_geo_vp * R1_vp:,.2f}}}{{{1 + im_geo_vp:.6f}}}")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_geo:,.4f}</h4>")
+            themed_info(f"<div style='{css_paso}'><span style='{math_style}'>VP</span> = ${vp_geo:,.4f}</div>")
 
     # ──────────────────────────────────────────────
     # VP — ARITMÉTICAS
@@ -511,7 +543,12 @@ with tab_vp:
         vp_arit = engine.vp_gradiente_aritmetico(R1_arit_vp, G_vp, im_arit_vp, nm_arit_vp)
 
         with c2:
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Valor Presente: ${vp_arit:,.4f}</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Valor Presente (<span style='{math_style}'>VP</span>)</span>"
+                f"<span style='{css_valor}'>${vp_arit:,.4f}</span>"
+                f"</div>"
+            )
             st.latex(rf"VP = R_1 \left[\frac{{1-(1+{str_i_av})^{{-nm}}}}{{{str_i_av}}}\right] + \frac{{G}}{{{str_i_av}}}\left(\left[\frac{{1-(1+{str_i_av})^{{-nm}}}}{{{str_i_av}}}\right] - nm(1+{str_i_av})^{{-nm}}\right)")
 
         with paso_a_paso():
@@ -526,7 +563,7 @@ with tab_vp:
             st.latex(rf"VP = {R1_arit_vp:,.2f} \left[\frac{{1-{desc_n:.6f}}}{{{val_i_av}}}\right] + {G_vp/im_arit_vp:,.2f}\left(\left[\frac{{1-{desc_n:.6f}}}{{{val_i_av}}}\right] - {nm_arit_vp:g}({desc_n:.6f})\right)")
             st.latex(rf"VP = {R1_arit_vp:,.2f} [{an:.6f}] + {G_vp/im_arit_vp:,.2f} ({an:.6f} - {v_nm:.6f})")
             st.latex(rf"VP = {t1v:,.2f} + {t2v:,.2f}")
-            themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>VP = ${vp_arit:,.4f}</h4>")
+            themed_info(f"<div style='{css_paso}'><span style='{math_style}'>VP</span> = ${vp_arit:,.4f}</div>")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -614,7 +651,12 @@ with tab_n:
         if np.isnan(n_res_total):
             themed_error("El monto objetivo es inalcanzable con la configuración de rentas y tasas actuales.")
         else:
-            themed_info(f"<h3 style='margin:0; color:inherit;'>Total de Periodos (nm): {n_res_total:.4f}</h3>")
+            themed_info(
+                f"<div style='{css_contenedor}'>"
+                f"<span style='{css_titulo}'>Total de Periodos (<span style='{math_style}'>nm</span>)</span>"
+                f"<span style='{css_valor}'>{n_res_total:.4f}</span>"
+                f"</div>"
+            )
             
             if usa_metodo_numerico:
                 alerta_metodo_numerico()
@@ -639,10 +681,10 @@ with tab_n:
                         st.latex(rf"nm = \frac{{-\ln({num_val:.6f})}}{{{np.log(1+im_n):.6f}}}")
                         st.latex(rf"nm = \frac{{-{np.log(num_val):.6f}}}{{{np.log(1+im_n):.6f}}}")
                         
-                    themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>nm = {n_res_total:.4f}</h4>")
+                    themed_info(f"<div style='{css_paso}'><span style='{math_style}'>nm</span> = {n_res_total:.4f}</div>")
                 else:
                     st.latex(r"f(nm) = \text{Valor}_\text{renta}(nm) - \text{Objetivo} = 0")
-                    themed_info(f"<h4 style='margin:0; color:inherit; text-align:center;'>nm \approx {n_res_total:.4f} \text{{ (Numérico)}}</h4>")
+                    themed_info(f"<div style='{css_paso}'><span style='{math_style}'>nm</span> &approx; {n_res_total:.4f} (Numérico)</div>")
 
             # Desglose del tiempo (meses, días)
             st.markdown("**Desglose exacto temporal:**")
