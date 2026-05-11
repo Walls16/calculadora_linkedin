@@ -256,15 +256,9 @@ with tab_port:
 
         separador()
 
-        tab_comp_p, tab_hist_p, tab_dl_p = st.tabs([
-            "Composición Efectiva", "Precios Históricos", "Exportar Datos"
+        tab_hist_p, tab_dl_p = st.tabs([
+            "Precios Históricos", "Exportar Datos"
         ])
-        with tab_comp_p:
-            df_pie = pd.DataFrame({"Activo": cols_reales, "Peso": pesos_reales})
-            fig_pie = px.pie(df_pie, values="Peso", names="Activo", hole=0.4,
-                             color_discrete_sequence=plotly_colors())
-            fig_pie.update_layout(height=380, **plotly_theme())
-            st.plotly_chart(fig_pie, use_container_width=True)
         with tab_hist_p:
             precios_norm = (data / data.iloc[0]) * 100
             fig_hist = px.line(precios_norm, x=precios_norm.index, y=precios_norm.columns,
