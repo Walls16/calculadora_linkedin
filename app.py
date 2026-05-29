@@ -125,7 +125,7 @@ def portada():
                    "Tablas dinámicas para créditos con enganche y fondos de amortización.", "a")
 
     with col2:
-        seccion_label("","Valuación de Activos y Riesgo", c["success"])
+        seccion_label("","Valuación de Activos y Riesgos", c["success"])
         index_card("5",  "Valuación de Bonos",
                    "Precio limpio, precio sucio y Yield to Maturity (YTM).", "b")
         index_card("6",  "Valuación de Acciones",
@@ -145,7 +145,10 @@ def portada():
                    "Primas y Griegas con BSM y Árbol Binomial CRR.", "c")
         index_card("12", "Derivados Exóticos",
                    "Barrera, Asiáticas, Lookback, Compuestas e Intercambio.", "c")
-
+        index_card("13", "Derivados de Crédito — CDS", 
+                     "Valuación de Credit Default Swaps (CDS) con metodología de Hull.", "c")
+        index_card("14", "Derivados de Crédito — CDO", 
+                     "Valuación de Collateralized Debt Obligations (CDO) con metodología de Hull.", "c")
         seccion_label("","Referencia", c["text_muted"])
         index_card("13", "Formulario",
                    "Cheat-sheet descargable en HTML con todas las ecuaciones.", "a")
@@ -207,10 +210,11 @@ pg = st.navigation(
             st.Page("pages/10_Forwards.py",           title="Forwards"              ),
             st.Page("pages/11_Derivados_Vanilla.py",  title="Derivados Vanilla"     ),
             st.Page("pages/12_Derivados_Exoticos.py", title="Derivados Exóticos"    ),
-            #st.Page("pages/13_Derivados_Credito.py",   title="Derivados de Crédito"  ),
+            st.Page("pages/13_Derivados_Credito_CDS.py",   title="Derivados de Crédito CDS"  ),
+            st.Page("pages/14_Derivados_Credito_CDO.py",   title="Derivados de Crédito CDO"  ),
         ],
         "Referencia": [
-            st.Page("pages/13_Formulario.py", title="Formulario"    ),
+            st.Page("pages/15_Formulario.py", title="Formulario"    ),
         ],
     },
     position="sidebar",

@@ -939,11 +939,11 @@ with tab_griegas:
             title=dict(text=title, font=dict(color=c["subtitle_color"], size=13)),
             scene=dict(
                 xaxis=dict(title="Spot S",   tickfont=dict(color=c["text_muted"]),
-                           gridcolor=c["border"], backgroundcolor=c["bg_light"]),
+                           gridcolor=plotly_color(c["border"]), backgroundcolor=c["bg_light"]),
                 yaxis=dict(title="T (años)", tickfont=dict(color=c["text_muted"]),
-                           gridcolor=c["border"], backgroundcolor=c["bg_light"]),
+                           gridcolor=plotly_color(c["border"]), backgroundcolor=c["bg_light"]),
                 zaxis=dict(title=ztitle,     tickfont=dict(color=c["text_muted"]),
-                           gridcolor=c["border"], backgroundcolor=c["bg_light"]),
+                           gridcolor=plotly_color(c["border"]), backgroundcolor=c["bg_light"]),
                 bgcolor=c["bg_main"],
             ),
             paper_bgcolor=c["bg_main"],
@@ -1333,7 +1333,7 @@ with tab_griegas:
                 line=dict(color=col_line, width=1.8, dash=dash),
             ))
         _vline(fig_all)
-        fig_all.add_hline(y=0, line_color=c["border"], line_width=1)
+        fig_all.add_hline(y=0, line_color=plotly_color(c["border"]), line_width=1)
         fig_all = apply_plotly_theme(fig_all)
         fig_all.update_layout(
             **plotly_theme(),
@@ -2171,19 +2171,19 @@ with tab_vol:
                 xaxis=dict(
                     title="Moneyness M = K/S",
                     tickfont=dict(color=c_surf["text_muted"]),
-                    gridcolor=c_surf["border"],
+                    gridcolor=plotly_color(c_surf["border"]),
                     backgroundcolor=c_surf["bg_light"],
                 ),
                 yaxis=dict(
                     title="Tiempo al Vencimiento T (años)",
                     tickfont=dict(color=c_surf["text_muted"]),
-                    gridcolor=c_surf["border"],
+                    gridcolor=plotly_color(c_surf["border"]),
                     backgroundcolor=c_surf["bg_light"],
                 ),
                 zaxis=dict(
                     title="σ Implícita (%)",
                     tickfont=dict(color=c_surf["text_muted"]),
-                    gridcolor=c_surf["border"],
+                    gridcolor=plotly_color(c_surf["border"]),
                     backgroundcolor=c_surf["bg_light"],
                 ),
                 bgcolor=c_surf["bg_main"],

@@ -125,7 +125,17 @@ THEMES = {
         "warning_bg":    "#FFF7ED", "warning_border":"#EA580C", "warning_text":  "#9A3412",
         "error_bg":      "#FFF1F2", "error_border":  "#BE123C", "error_text":    "#881337",
     },
-
+    "Ocre & Polvo": {
+        "primary":       "#9F5512", "secondary":     "#D38C3B", "accent":        "#613312",
+        "success":       "#A67C45", "danger":        "#7B2E10", "warning":       "#E29F4B",
+        "bg_light":      "#E2A761", "border":        "#8B4513", "text_muted":    "#4B2C16",
+        "sidebar_bg":    "#2B1B12", "title_color":   "#E79D43", "subtitle_color":"#C57D2E",
+        "input_bg":      "#3E2719", "text_color":    "#FAD4A6", "bg_main":       "#1A110B",
+        "info_bg":       "#4E3221", "info_border":   "#9F5512", "info_text":     "#FAD4A6",
+        "success_bg":    "#5C432A", "success_border":"#A67C45", "success_text":  "#E2A761",
+        "warning_bg":    "#7B4B20", "warning_border":"#E29F4B", "warning_text":  "#FFD3A0",
+        "error_bg":      "#3D1408", "error_border":  "#7B2E10", "error_text":    "#FF9B7D"
+    },
     # -------------------------------------------------------------------------
     # TEMAS OSCUROS (9 Temas)
     # -------------------------------------------------------------------------
@@ -227,8 +237,43 @@ THEMES = {
         "success_bg":    "#083344", "success_border":"#22D3EE", "success_text":  "#A5F3FC",
         "warning_bg":    "#431407", "warning_border":"#FB923C", "warning_text":  "#FFEDD5",
         "error_bg":      "#450A0A", "error_border":  "#F43F5E", "error_text":    "#FECACA",
+    },
+    "Cyan Nocturno": {
+        "primary":       "#0A7276", "secondary":     "#03649F", "accent":        "#75CEC5",
+        "success":       "#015468", "danger":        "#C62828", "warning":       "#E1C16E",
+        "bg_light":      "#00455B", "border":        "#0A7276", "text_muted":    "#94C2DA",
+        "sidebar_bg":    "#001B24", "title_color":   "#75CEC5", "subtitle_color":"#0A7276",
+        "input_bg":      "#002B36", "text_color":    "#E0F7FA", "bg_main":       "#000000",
+        "info_bg":       "#003649", "info_border":   "#0A7276", "info_text":     "#E0F7FA",
+        "success_bg":    "#00242B", "success_border":"#015468", "success_text":  "#75CEC5",
+        "warning_bg":    "#2B2400", "warning_border":"#E1C16E", "warning_text":  "#FFECB3",
+        "error_bg":      "#240000", "error_border":  "#C62828", "error_text":    "#FFEBEE",
+    },
+    "Joi Hologram": {
+        "primary":       "#D43D96", "secondary":     "#4A55A2", "accent":        "#7986CB",
+        "success":       "#2E7D32", "danger":        "#961053", "warning":       "#FFD54F",
+        "bg_light":      "#A569BD", "border":        "#D43D96", "text_muted":    "#B19CD9",
+        "sidebar_bg":    "#282046", "title_color":   "#FF69B4", "subtitle_color":"#8E99F3",
+        "input_bg":      "#3B2A5E", "text_color":    "#F3E5F5", "bg_main":       "#1A142F",
+        "info_bg":       "#4A148C", "info_border":   "#D43D96", "info_text":     "#F3E5F5",
+        "success_bg":    "#1B5E20", "success_border":"#4CAF50", "success_text":  "#E8F5E9",
+        "warning_bg":    "#4A3B00", "warning_border":"#FFD54F", "warning_text":  "#FFFDE7",
+        "error_bg":      "#4A001F", "error_border":  "#961053", "error_text":    "#FFEBEE"
+    }, 
+    "Rooftop Contrast": {
+        "primary":       "#1D4D3A", "secondary":     "#126B72", "accent":        "#B3112B",
+        "success":       "#4E8F6A", "danger":        "#B3112B", "warning":       "#A56767",
+        "bg_light":      "#7CAB8E", "border":        "#1D4D3A", "text_muted":    "#687B75",
+        "sidebar_bg":    "#0C1E18", "title_color":   "#95CBD2", "subtitle_color":"#5995A0",
+        "input_bg":      "#162E25", "text_color":    "#D4E1DD", "bg_main":       "#050C0A",
+        "info_bg":       "#0A2B23", "info_border":   "#1D4D3A", "info_text":     "#D4E1DD",
+        "success_bg":    "#1D3A2C", "success_border":"#4E8F6A", "success_text":  "#9EC4AF",
+        "warning_bg":    "#3A2B2B", "warning_border":"#A56767", "warning_text":  "#E2CECE",
+        "error_bg":      "#3A080A", "error_border":  "#B3112B", "error_text":    "#FFBABD"
     }
 }
+
+
 
 _DEFAULT_THEME = "Azul Clasico"
 
@@ -253,7 +298,11 @@ def render_theme_selector():
             "Tema Drácula", 
             "Bosque Luminiscente", 
             "Obsidiana Roja", 
-            "Espacio Profundo"
+            "Espacio Profundo",
+            "Ocre & Polvo",
+            "Cyan Nocturno",
+            "Joi Hologram", 
+            "Rooftop Contrast"
         ]
 
         temas_claros = [

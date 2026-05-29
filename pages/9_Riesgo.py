@@ -39,7 +39,7 @@ from credit_engine import (
 from utils import (
     get_engine, page_header, paso_a_paso, separador,
     themed_info, themed_success, themed_warning, themed_error,
-    plotly_theme, plotly_colors, get_current_theme,
+    plotly_theme, plotly_colors, get_current_theme, plotly_color,
 )
 
 # =============================================================================
@@ -822,7 +822,7 @@ with tab_cm:
                             marker_color=colors_bv,
                             name="Prob (%)",
                         ))
-                        fig_bv.add_hline(y=0, line_color=c_th["border"])
+                        fig_bv.add_hline(y=0, line_color=plotly_color(c_th["border"]))
                         fig_bv.update_layout(
                             title=f"{b['nombre']} — Rating actual: {b['rating']}",
                             xaxis_title="Rating destino", yaxis_title="Probabilidad (%)",
